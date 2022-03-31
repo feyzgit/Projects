@@ -1,0 +1,5 @@
+RS_SOURCE_SPLIT_TO_72 this program solve the 72 character error in the enhancement.
+In enhancement you can not 'copy and paste' and solve the 72 character error.
+In this situation you can use the se38 and execute this 'RS_SOURCE_SPLIT_TO_72' program.
+After that you will write the program name and execute again.
+And then program will work it.
