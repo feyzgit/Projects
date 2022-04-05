@@ -427,7 +427,7 @@ FORM get_kyov .
       LOOP AT lt_bsis_642 ASSIGNING FIELD-SYMBOL(<fs_642>)
                           WHERE bldat = <fs_collect>-bldat
                             AND waers = <fs_collect>-waers.
-
+-->begin of-fkarakas - 04.04.2022                            
         LOOP AT lt_bsis INTO DATA(ls_bsis)
                                   WHERE bukrs = <fs_collect>-bukrs AND
                                         belnr = <fs_collect>-belnr AND
@@ -452,6 +452,7 @@ FORM get_kyov .
           ENDIF.
         ENDIF.
       ENDLOOP.
+<--end of-fkarakas - 04.04.2022   
       SORT lt_multi_642 BY dmbtr ASCENDING.
 
       TYPES: BEGIN OF ty_multi,
@@ -469,7 +470,7 @@ FORM get_kyov .
                       WHERE budat EQ <fs_collect>-budat
                         AND waers EQ <fs_collect>-waers
                         AND hkont CP '193*'.
-
+-->begin of-fkarakas - 04.04.2022
         LOOP AT lt_bsis INTO DATA(ls_bsis3)
                             WHERE bukrs = <fs_collect>-bukrs AND
                                   belnr = <fs_collect>-belnr AND
@@ -494,6 +495,7 @@ FORM get_kyov .
           ENDIF.
         ENDIF.
       ENDLOOP.
+<--end of-fkarakas - 04.04.2022
       SORT lt_multi_tax BY dmbtr ASCENDING.
 
       DESCRIBE TABLE lt_multi_642 LINES DATA(lv_size).
