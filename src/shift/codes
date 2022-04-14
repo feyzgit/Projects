@@ -1,0 +1,15 @@
+    IF wa_tdhpdip-tutar IS INITIAL.
+      lv_tutar = ''.
+    ELSE.
+      IF wa_tdhpdip-dipnotno eq '0020'.
+      DATA: _persay TYPE numc10.
+      CLEAR: _persay.
+      _persay = wa_tdhpdip-tutar.
+      lv_tutar = _persay.
+      SHIFT lv_tutar LEFT DELETING LEADING '0'.
+      ELSE.
+        WRITE wa_tdhpdip-tutar TO lv_tutar_ch CURRENCY 'TRY'.
+        CONDENSE lv_tutar_ch NO-GAPS.
+        CONCATENATE lv_tutar_ch ' TL' INTO lv_tutar.
+      ENDIF.
+    ENDIF.
