@@ -1,0 +1,21 @@
+SELECT zout~bukrs,
+zout~belnr,
+zout~gjahr,
+zout~buzei,
+zlog~awkey,
+rdoc~bukrs AS bukrs_ref,
+rdoc~belnr AS belnr_ref,
+rdoc~gjahr AS gjahr_ref,
+rdoc~stblg AS stblg_ref
+FROM @mt_data_out AS zout
+INNER JOIN yittr_130_t_olog AS zlog ON zout~odmno = zlog~odmno AND
+zout~odmdt = zlog~odmdt AND
+zout~bukrs = zlog~bukrs AND
+zout~belnr = zlog~belnr AND
+zout~gjahr = zlog~gjahr AND
+zout~buzei = zlog~buzei
+INNER JOIN bkpf AS rdoc ON substring( zlog~awkey,1,10 ) = rdoc~belnr AND
+substring( zlog~awkey,11,4 ) = rdoc~bukrs AND
+substring( zlog~awkey,15,4 ) = rdoc~gjahr
+WHERE zout~odmno <> @space
+INTO TABLE @DATA(t_data).
