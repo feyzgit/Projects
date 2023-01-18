@@ -1,0 +1,36 @@
+*&---------------------------------------------------------------------*
+*& Program ZAYGCOGEN_R_ARAC_KAR
+*&---------------------------------------------------------------------*
+*& @author Feyzanur Karakaş <feyzanur.karakas@finpro.com.tr>
+*&---------------------------------------------------------------------*
+PROGRAM zaygcogen_r_arac_kar.
+
+INCLUDE zaygcogen_r_arac_kar_clsdat.
+INCLUDE zaygcogen_r_arac_kar_frmdat.
+
+LOAD-OF-PROGRAM.
+  DATA(app) = application=>app_instance( ).
+
+INITIALIZATION.
+  application=>initialization( ).
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_spmon.
+  application=>at_selection_screen_request(
+    EXPORTING
+      iv_fieldname = _cons-p_spmon ).
+
+AT SELECTION-SCREEN.
+  application=>at_selection_screen( ).
+
+AT SELECTION-SCREEN OUTPUT.
+  application=>at_selection_screen_output( ).
+
+START-OF-SELECTION.
+  app->retrieve_data(
+    EXPORTING
+      iv_spmon = p_spmon
+      iv_werks = s_werks[]
+      iv_lcplt = s_lcplt[] ).
+
+END-OF-SELECTION.
+  app->show( ).
