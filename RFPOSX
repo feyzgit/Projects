@@ -1,0 +1,7 @@
+call function 'ITEM_STRUC_EXTENSION'
+  EXPORTING
+    basic_strucname    = 'RFPOSX'
+    ext_strucname      = 'RFPOSXEXT'
+    ext_fields_tabname = 'T021S'
+    i_lstcl            = '2'
+    x_transport        = 'X'
