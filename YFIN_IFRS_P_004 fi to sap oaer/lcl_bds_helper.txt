@@ -1,0 +1,458 @@
+*&---------------------------------------------------------------------*
+*&  Include           YFIN_IFRS_HELPER
+*&---------------------------------------------------------------------*
+CLASS lcl_bds_helper DEFINITION.
+
+  PUBLIC SECTION.
+
+    CLASS-DATA:
+      mo_apps TYPE REF TO lcl_bds_helper.
+
+    CONSTANTS:
+      BEGIN OF mc_cons,
+        download TYPE char10 VALUE 'DOWNLOAD',
+      END OF mc_cons.
+
+    CONSTANTS:
+      BEGIN OF mc_msg,
+        id      TYPE symsgid    VALUE '00',
+        success TYPE bapi_mtype VALUE 'S',
+        error   TYPE bapi_mtype VALUE 'E',
+        warning TYPE bapi_mtype VALUE 'W',
+        info    TYPE bapi_mtype VALUE 'I',
+        abort   TYPE bapi_mtype VALUE 'A',
+      END OF mc_msg.
+
+    TYPES:
+      BEGIN OF ty_session,
+        title   TYPE cua_tit_tx,
+        exclude TYPE TABLE OF sy-ucomm WITH DEFAULT KEY,
+      END OF ty_session.
+
+    DATA:
+      mv_session TYPE ty_session,
+      mo_salv    TYPE REF TO cl_salv_table,
+      mo_alvcnt  TYPE REF TO cl_gui_custom_container,
+      mv_result  TYPE zfi_s_bds.
+
+    CLASS-METHODS:
+      get_apps_instance
+        RETURNING
+          value(ro_apps) TYPE REF TO lcl_bds_helper
+        RAISING
+          cx_t100_msg.
+    TYPES: mty_date_rng TYPE RANGE OF datum,
+           mty_time_rng TYPE RANGE OF uzeit.
+
+    TYPES:
+      BEGIN OF ty_timesdat,
+        date TYPE datum,
+        time TYPE sy-uzeit,
+      END OF ty_timesdat.
+
+    METHODS:
+      start_apps
+        EXCEPTIONS
+          handle_error,
+      get_data
+        IMPORTING
+          im_date TYPE mty_date_rng
+          im_time TYPE mty_time_rng
+        EXCEPTIONS
+          handle_error,
+      call_screen
+        EXCEPTIONS
+          handle_error,
+      popup_to_question
+        IMPORTING
+          !im_titlebar     TYPE clike
+          !im_question     TYPE clike
+        RETURNING
+          value(rv_answer) TYPE char1,
+      handle_hotspot_click FOR EVENT link_click OF cl_salv_events_table
+        IMPORTING
+          row
+          column,
+      parse_times
+        IMPORTING
+          im_times TYPE timestamp
+        RETURNING
+          value(rv_times) TYPE ty_timesdat,
+      download_file
+        IMPORTING
+          im_objkey  TYPE datum
+          im_docucls TYPE sdok_fnext
+          im_docid   TYPE bds_docid
+        EXCEPTIONS
+          handle_error.
+
+  PRIVATE SECTION.
+    METHODS:
+       last_day_of_month
+         IMPORTING
+           im_keydat      TYPE sy-datum
+         RETURNING
+           value(rv_last) TYPE sy-datum.
+
+ENDCLASS.                    "lcl_helper DEFINITION
+
+
+*----------------------------------------------------------------------*
+*       CLASS lcl_helper IMPLEMENTATION
+*----------------------------------------------------------------------*
+*
+*----------------------------------------------------------------------*
+CLASS lcl_bds_helper IMPLEMENTATION.
+
+  METHOD get_apps_instance.
+
+    IF mo_apps IS INITIAL.
+      CREATE OBJECT mo_apps.
+      FREE: so_erdat, so_erzet.
+      DATA: _erdat LIKE LINE OF so_erdat,
+            _erzet LIKE LINE OF so_erzet,
+            _ldate TYPE datum.
+
+      _erdat = 'IBT'.
+      CONCATENATE sy-datum(6) '01' INTO _erdat-low.
+      _ldate = mo_apps->last_day_of_month( sy-datum ).
+      _erdat-high = _ldate.
+      APPEND _erdat TO so_erdat.
+
+      _erzet = 'IBT'.
+      _erzet-low = '000000'.
+      _erzet-high = '235959'.
+      APPEND _erzet TO so_erzet.
+    ENDIF.
+    ro_apps = mo_apps.
+
+  ENDMETHOD.                    "get_apps_instance
+  METHOD start_apps.
+
+    FREE: mv_result.
+    get_data(
+      EXPORTING
+        im_date = so_erdat[]
+        im_time = so_erzet[]
+      EXCEPTIONS
+        handle_error = 1
+        OTHERS       = 2 ).
+
+    CALL SCREEN 9000 STARTING AT 10 10.
+
+  ENDMETHOD.                    "start_apps
+  METHOD get_data.
+
+    TYPES: BEGIN OF ty_sdokobject,
+     class TYPE sdok_class,
+     objid TYPE sdok_docid,
+     END OF ty_sdokobject.
+
+    FIELD-SYMBOLS: <bds> TYPE bdn_con.
+
+    DATA: lt_bds  TYPE TABLE OF bdn_con,
+          lt_data TYPE TABLE OF zfi_s_bds,
+          color   TYPE lvc_t_scol,
+          s_color TYPE lvc_s_scol,
+          _times TYPE timestamp,
+          _keytime TYPE ty_timesdat.
+
+    CALL FUNCTION 'BDS_ALL_CONNECTIONS_GET'
+      EXPORTING
+        classname        = 'YFIN_IFRS_EXCEL'
+        classtype        = 'OT'
+      TABLES
+        all_connections  = lt_bds
+      EXCEPTIONS
+        no_objects_found = 1
+        error_kpro       = 2
+        internal_error   = 3
+        not_authorized   = 4
+        OTHERS           = 5.
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                 WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 RAISING handle_error.
+    ENDIF.
+
+    FREE: mt_alvdat.
+    LOOP AT lt_bds ASSIGNING <bds> WHERE objkey IS NOT INITIAL.
+      APPEND INITIAL LINE TO mt_alvdat ASSIGNING <alvdat>.
+      <alvdat>-icon = icon_wd_radio_button_empty.
+      <alvdat>-file_name = <bds>-descript.
+      <alvdat>-ernam     = <bds>-crea_user.
+      <alvdat>-id        = <bds>-loio_id.
+      <alvdat>-docuclass = <bds>-docuclass.
+
+      _times = <bds>-crea_time.
+      parse_times(
+        EXPORTING
+          im_times = _times
+        RECEIVING
+        rv_times = _keytime ).
+      MOVE-CORRESPONDING _keytime TO <alvdat>.
+    ENDLOOP.
+    DELETE mt_alvdat WHERE date NOT IN so_erdat
+                        OR time NOT IN so_erzet.
+
+    READ TABLE mt_alvdat ASSIGNING <alvdat> INDEX 1.
+    IF sy-subrc IS INITIAL.
+      <alvdat>-icon = icon_radiobutton.
+      FREE: s_color.
+      s_color-color-col = 5.
+      s_color-color-int = 0.
+      s_color-color-inv = 0.
+      APPEND s_color TO color.
+      <alvdat>-color = color.
+    ENDIF.
+
+  ENDMETHOD.                    "get_data
+  METHOD call_screen.
+
+    DATA: lo_col_tab TYPE REF TO cl_salv_column_table,
+          lr_events  TYPE REF TO cl_salv_events_table.
+
+    IF NOT mo_alvcnt IS BOUND.
+      CREATE OBJECT mo_alvcnt
+        EXPORTING
+          container_name              = 'ALV_CNT'
+        EXCEPTIONS
+          cntl_error                  = 1
+          cntl_system_error           = 2
+          create_error                = 3
+          lifetime_error              = 4
+          lifetime_dynpro_dynpro_link = 5
+          OTHERS                      = 6.
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 RAISING handle_error.
+      ENDIF.
+
+      TRY.
+          DATA: _salv_msg TYPE REF TO cx_salv_msg.
+          cl_salv_table=>factory(
+            EXPORTING
+              r_container  = mo_alvcnt
+            IMPORTING
+              r_salv_table = mo_salv
+            CHANGING
+              t_table      = mt_alvdat ).
+        CATCH cx_salv_msg INTO _salv_msg.
+          MESSAGE ID _salv_msg->msgid TYPE _salv_msg->msgty NUMBER _salv_msg->msgno
+             WITH _salv_msg->msgv1 _salv_msg->msgv2 _salv_msg->msgv3 _salv_msg->msgv4 RAISING handle_error.
+      ENDTRY.
+
+      mo_salv->get_functions( )->set_all( abap_false ).
+      mo_salv->get_columns( )->set_optimize( abap_true ).
+      mo_salv->get_columns( )->set_color_column( 'COLOR' ).
+
+      DATA: columns TYPE salv_t_column_ref.
+      FIELD-SYMBOLS: <fcat> TYPE salv_s_column_ref.
+
+      columns = mo_salv->get_columns( )->get( ).
+      LOOP AT columns ASSIGNING <fcat>.
+        CASE <fcat>-columnname.
+          WHEN 'ICON'.
+            <fcat>-r_column->set_short_text( |Seçim| ).
+            <fcat>-r_column->set_medium_text( |Seçim| ).
+            <fcat>-r_column->set_long_text( |Seçim| ).
+            <fcat>-r_column->set_alignment( value = if_salv_c_alignment=>centered ).
+          WHEN 'ID' OR 'DOCUCLASS'.
+            <fcat>-r_column->set_technical( if_salv_c_bool_sap=>true ).
+        ENDCASE.
+      ENDLOOP.
+
+      TRY.
+          lo_col_tab ?= mo_salv->get_columns( )->get_column( 'ICON' ).
+          CALL METHOD lo_col_tab->set_cell_type
+            EXPORTING
+              value = if_salv_c_cell_type=>hotspot.
+        CATCH cx_salv_not_found.
+        CATCH cx_salv_data_error.
+      ENDTRY.
+
+      DATA: events TYPE REF TO cl_salv_events_table.
+      events = mo_salv->get_event( ).
+
+      SET HANDLER me->handle_hotspot_click FOR events.
+      mo_salv->display( ).
+    ENDIF.
+
+  ENDMETHOD.                    "call_screen
+  METHOD popup_to_question.
+
+    CALL FUNCTION 'POPUP_TO_CONFIRM'
+      EXPORTING
+        titlebar              = im_titlebar
+        text_question         = im_question
+        text_button_1         = 'Evet'
+        text_button_2         = 'Hayır'
+        popup_type            = 'ICON_MESSAGE_CRITICAL'
+        default_button        = '2'
+        display_cancel_button = abap_true
+      IMPORTING
+        answer                = rv_answer
+      EXCEPTIONS
+        text_not_found        = 1
+        OTHERS                = 2.
+
+  ENDMETHOD.                    "popup_to_question
+  METHOD handle_hotspot_click.
+    FIELD-SYMBOLS: <alvdat> TYPE zfi_s_bds.
+    DATA: wa TYPE zfi_s_bds,
+          color TYPE lvc_t_scol,
+          s_color TYPE lvc_s_scol.
+
+    READ TABLE mt_alvdat ASSIGNING <alvdat> INDEX row.
+    IF sy-subrc IS INITIAL.
+      CASE column.
+        WHEN 'ICON'.
+          CLEAR: wa, color.
+          wa-icon = icon_wd_radio_button_empty.
+          wa-color = color.
+
+          MODIFY mt_alvdat FROM wa TRANSPORTING icon color WHERE icon EQ icon_radiobutton.
+          IF sy-subrc IS INITIAL.
+            FREE: s_color.
+            s_color-color-col = 5.
+            s_color-color-int = 0.
+            s_color-color-inv = 0.
+            APPEND s_color TO color.
+
+            <alvdat>-icon = icon_radiobutton.
+            <alvdat>-color = color.
+          ENDIF.
+          mo_salv->refresh(
+            EXPORTING
+              refresh_mode = if_salv_c_refresh=>soft ).
+      ENDCASE.
+    ENDIF.
+
+  ENDMETHOD.                    "handle_hotspot_click
+  METHOD parse_times.
+    FREE: rv_times.
+    CONVERT TIME STAMP im_times TIME ZONE sy-zonlo INTO DATE rv_times-date TIME rv_times-time.
+  ENDMETHOD.                    "parse_times
+  METHOD download_file.
+
+    DATA: t_signature TYPE STANDARD TABLE OF bapisignat,
+          s_signature TYPE bapisignat.
+    DATA: BEGIN OF display_struc,
+            classname TYPE bapibds01-classname,
+            classtype TYPE bapibds01-classtype,
+            objkey    TYPE bapibds01-objkey,
+            docuclass TYPE bdn_con-docuclass,
+          END OF display_struc.
+
+    FREE: display_struc.
+    display_struc-classname = mc_bds-classname.
+    display_struc-classtype = mc_bds-classtype.
+    display_struc-objkey    = im_objkey.
+    display_struc-docuclass = im_docucls.
+
+    FREE: s_signature.
+    s_signature-doc_count = 1.
+    s_signature-doc_id = im_docid.
+    s_signature-doc_ver_no = 1.
+    s_signature-doc_var_id = 1.
+
+    APPEND s_signature TO t_signature.
+
+    CALL FUNCTION 'BDS_OBJECT_DISPLAY_INTERN'
+      EXPORTING
+        classname      = display_struc-classname
+        classtype      = display_struc-classtype
+        client         = sy-mandt
+        object_key     = display_struc-objkey
+        bds_docuclass  = display_struc-docuclass
+      TABLES
+        signature      = t_signature
+      EXCEPTIONS
+        error_kpro     = 1
+        internal_error = 2
+        OTHERS         = 3.
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE 'S' NUMBER sy-msgno
+      WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 RAISING handle_error.
+    ENDIF.
+
+
+
+  ENDMETHOD.                    "download_file
+  METHOD last_day_of_month.
+
+    CALL FUNCTION 'RP_LAST_DAY_OF_MONTHS'
+      EXPORTING
+        day_in            = im_keydat
+      IMPORTING
+        last_day_of_month = rv_last
+      EXCEPTIONS
+        day_in_no_date    = 1
+        OTHERS            = 2.
+  ENDMETHOD.                    "last_day_of_month
+
+ENDCLASS.                    "lcl_helper IMPLEMENTATION
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_9000  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_9000 OUTPUT.
+
+  SET PF-STATUS 'STANDARD'.
+
+  lcl_bds_helper=>mo_apps->call_screen(
+  EXCEPTIONS
+  handle_error = 1
+  OTHERS       = 2 ).
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+    WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+ENDMODULE.                 " STATUS_9000  OUTPUT
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_9000  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_9000 INPUT.
+
+  CASE sy-ucomm.
+    WHEN 'BACK' OR 'CANC' OR 'EXIT'.
+      LEAVE TO SCREEN 0.
+    WHEN '&LIST'.
+      lcl_bds_helper=>mo_apps->get_data(
+        EXPORTING
+          im_date      = so_erdat[]
+          im_time      = so_erzet[]
+        EXCEPTIONS
+          handle_error = 1
+          OTHERS       = 2 ).
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                   WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      ENDIF.
+      lcl_bds_helper=>mo_apps->mo_salv->refresh(
+        EXPORTING
+          refresh_mode = if_salv_c_refresh=>soft ).
+
+    WHEN '&DOWNLOAD'.
+      READ TABLE mt_alvdat ASSIGNING <alvdat> WITH KEY icon = icon_radiobutton.
+      IF sy-subrc IS INITIAL.
+        lcl_bds_helper=>mo_apps->download_file(
+          EXPORTING
+            im_objkey    = <alvdat>-date
+            im_docucls   = <alvdat>-docuclass
+            im_docid     = <alvdat>-id
+        EXCEPTIONS
+          handle_error = 1
+          OTHERS       = 2 ).
+        IF sy-subrc <> 0.
+          MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                     WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+        ENDIF.
+      ENDIF.
+  ENDCASE.
+
+ENDMODULE.                 " USER_COMMAND_9000  INPUT
+

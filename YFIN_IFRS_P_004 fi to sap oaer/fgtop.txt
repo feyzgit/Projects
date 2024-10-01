@@ -1,0 +1,81 @@
+FUNCTION-POOL yfin_ifrs_fg_01.              "MESSAGE-ID ..
+
+* INCLUDE LYFIN_IFRS_FG_01D...               " Local class definition
+
+CONSTANTS:
+  BEGIN OF mc_bds,
+      classname TYPE sbdst_classname VALUE 'YFIN_IFRS_EXCEL',
+      classtype TYPE sbdst_classtype VALUE 'OT',
+    END OF mc_bds .
+
+DATA: s_bkpf LIKE bkpf,
+      gd_documentheader LIKE bapiache09,
+      t_bseg            LIKE TABLE OF bseg WITH HEADER LINE,
+      it_accountgl      LIKE TABLE OF bapiacgl09 WITH HEADER LINE,
+      it_currencyamount LIKE TABLE OF bapiaccr09 WITH HEADER LINE,
+      it_accounttax     LIKE TABLE OF bapiactx09 WITH HEADER LINE,
+      it_return         LIKE TABLE OF bapiret2   WITH HEADER LINE,
+      it_criteria       LIKE TABLE OF bapiackec9 WITH HEADER LINE,
+      it_valuefield     LIKE TABLE OF bapiackev9 WITH HEADER LINE.
+
+DATA: lv_itemno LIKE bapiacgl09-itemno_acc,
+      lv_land1 LIKE t005-land1,
+      lv_waer1 LIKE bkpf-waers,
+      lv_waer3 LIKE bkpf-waers,
+      lv_waer4 LIKE bkpf-waers.
+
+DATA: l_type LIKE gd_documentheader-obj_type,
+      l_key  LIKE gd_documentheader-obj_key,
+      l_sys  LIKE gd_documentheader-obj_sys.
+
+DATA : gv_auto_commit.
+
+DATA:
+  v_erdat   TYPE zfi_s_bds-date,
+  v_erzet   TYPE zfi_s_bds-time,
+  mt_alvdat TYPE STANDARD TABLE OF zfi_s_bds.
+
+FIELD-SYMBOLS: <alvdat> TYPE zfi_s_bds.
+
+SELECTION-SCREEN BEGIN OF SCREEN 9100 AS SUBSCREEN.
+SELECT-OPTIONS:
+  so_erdat FOR v_erdat,
+  so_erzet FOR v_erzet.
+SELECTION-SCREEN END OF SCREEN 9100.
+
+*&---------------------------------------------------------------------*
+*&      Form  convert_kur
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->IWRBTR     text
+*      -->IWAERS     text
+*      -->IGVWAERS   text
+*----------------------------------------------------------------------*
+FORM convert_kur  USING iwrbtr
+                        iwaers
+                        igvwaers
+                        idate.
+
+  DATA : lv_amount TYPE rseg-wrbtr.
+
+  CALL FUNCTION 'CONVERT_TO_LOCAL_CURRENCY'
+    EXPORTING
+      date             = idate
+      foreign_amount   = iwrbtr
+      foreign_currency = iwaers
+      local_currency   = igvwaers
+    IMPORTING
+      local_amount     = lv_amount
+    EXCEPTIONS
+      no_rate_found    = 1
+      overflow         = 2
+      no_factors_found = 3
+      no_spread_found  = 4
+      derived_2_times  = 5
+      OTHERS           = 6.
+
+  iwrbtr = lv_amount .
+
+
+ENDFORM.                    " CONVERT_KUR

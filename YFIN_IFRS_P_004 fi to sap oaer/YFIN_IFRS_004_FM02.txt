@@ -1,0 +1,36 @@
+FUNCTION yfin_ifrs_004_fm02.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  EXCEPTIONS
+*"      HANDLE_ERROR
+*"----------------------------------------------------------------------
+  DATA: x_msg TYPE REF TO cx_t100_msg.
+  TRY.
+      DATA: mo_helper TYPE REF TO lcl_bds_helper.
+      mo_helper = lcl_bds_helper=>get_apps_instance( ).
+
+      mo_helper->start_apps(
+        EXCEPTIONS
+          handle_error = 1
+          OTHERS       = 2 ).
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid
+              TYPE sy-msgty
+            NUMBER sy-msgno
+              WITH sy-msgv1
+                   sy-msgv2
+                   sy-msgv3
+                   sy-msgv4 RAISING handle_error.
+      ENDIF.
+    CATCH cx_t100_msg INTO x_msg.
+      MESSAGE ID x_msg->t100_msgid
+            TYPE 'E'
+          NUMBER x_msg->t100_msgno
+            WITH x_msg->t100_msgv1
+                 x_msg->t100_msgv2
+                 x_msg->t100_msgv3
+                 x_msg->t100_msgv4 RAISING handle_error.
+  ENDTRY.
+
+ENDFUNCTION.
+

@@ -1,0 +1,147 @@
+FUNCTION yfin_ifrs_004_fm01.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(IV_DOCUMENT) TYPE  YFIN_IFRS_S_008
+*"     VALUE(IV_FILE) TYPE  SBDST_FILES OPTIONAL
+*"     VALUE(IV_CONTENT) TYPE  XSTRING OPTIONAL
+*"  EXPORTING
+*"     VALUE(EV_DOCUMENT) TYPE  YFIN_IFRS_S_008
+*"----------------------------------------------------------------------
+
+  CONSTANTS:
+  BEGIN OF mc_bds,
+      classname TYPE sbdst_classname VALUE 'YFIN_IFRS_EXCEL',
+      classtype TYPE sbdst_classtype VALUE 'OT',
+    END OF mc_bds .
+
+  DATA: lt_components TYPE sbdst_components,
+        lt_content    TYPE sbdst_content,
+        lt_signature  TYPE sbdst_signature,
+        lv_object_key TYPE sbdst_object_key,
+        _file_name    TYPE char50,
+        _times        TYPE char15.
+
+  FIELD-SYMBOLS: <components> TYPE bapicompon,
+                 <signature>  TYPE bapisignat.
+
+  IF iv_document-times IS INITIAL.
+    MESSAGE e010(yfin_ufrs).
+    RETURN.
+  ENDIF.
+
+  IF iv_document-comp_id IS INITIAL.
+    MESSAGE e011(yfin_ufrs).
+    RETURN.
+  ENDIF.
+
+  IF iv_document-mimetype IS INITIAL.
+    MESSAGE e012(yfin_ufrs).
+    RETURN.
+  ENDIF.
+
+  IF iv_content IS SUPPLIED AND iv_content IS INITIAL.
+    MESSAGE e013(yfin_ufrs).
+    RETURN.
+  ENDIF.
+
+  FREE: lt_components,lt_content,lt_signature,lv_object_key.
+
+  lv_object_key = sy-datum.
+
+  APPEND INITIAL LINE TO lt_signature ASSIGNING <signature>.
+  <signature>-doc_count = 1.
+  <signature>-comp_count = 1.
+  <signature>-doc_var_id = 1.
+  <signature>-doc_var_tg  = 'OR'.
+  <signature>-prop_name  = 'BDS_DOCUMENTCLASS'.
+  <signature>-prop_value = |{ iv_document-extension CASE = UPPER }|.
+  APPEND INITIAL LINE TO lt_signature ASSIGNING <signature>.
+  <signature>-doc_count = 1.
+  <signature>-comp_count = 1.
+  <signature>-doc_var_id = 1.
+  <signature>-doc_var_tg  = 'OR'.
+  <signature>-prop_name  = 'BDS_COUNTREP'.
+  <signature>-prop_value = ' '.
+  APPEND INITIAL LINE TO lt_signature ASSIGNING <signature>.
+  <signature>-doc_count = 1.
+  <signature>-comp_count = 1.
+  <signature>-doc_var_id = 1.
+  <signature>-doc_var_tg  = 'OR'.
+  <signature>-prop_name  = 'BDS_DOCUMENTTYPE'.
+  <signature>-prop_value = 'BDS_SHEET'.
+  _times = iv_document-times.
+  CONCATENATE iv_document-filename(25) _times INTO _file_name.
+  APPEND INITIAL LINE TO lt_signature ASSIGNING <signature>.
+  <signature>-doc_count = 1.
+  <signature>-comp_count = 1.
+  <signature>-doc_var_id = 1.
+  <signature>-doc_var_tg  = 'OR'.
+  <signature>-prop_name  = 'DESCRIPTION'.
+  <signature>-prop_value = _file_name.
+
+  IF iv_content IS SUPPLIED.
+
+    CALL FUNCTION 'SCMS_XSTRING_TO_BINARY'
+      EXPORTING
+        buffer     = iv_content
+      TABLES
+        binary_tab = lt_content.
+
+    CALL METHOD cl_bds_document_set=>create_with_table
+      EXPORTING
+        classname       = mc_bds-classname
+        classtype       = mc_bds-classtype
+        components      = lt_components
+        content         = lt_content
+      CHANGING
+        object_key      = lv_object_key
+        signature       = lt_signature
+      EXCEPTIONS
+        internal_error  = 1
+        error_kpro      = 2
+        parameter_error = 3
+        not_authorized  = 4
+        not_allowed     = 5
+        nothing_found   = 6
+        OTHERS          = 7.
+    IF sy-subrc <> 0.
+      MESSAGE e014(yfin_ufrs).
+      RETURN.
+    ENDIF.
+
+  ELSE.
+
+    CALL METHOD cl_bds_document_set=>create_with_files
+      EXPORTING
+        classname       = mc_bds-classname
+        classtype       = mc_bds-classtype
+        client          = sy-mandt
+      CHANGING
+        files           = iv_file
+        object_key      = lv_object_key
+        signature       = lt_signature
+      EXCEPTIONS
+        internal_error  = 1
+        error_kpro      = 2
+        parameter_error = 3
+        not_allowed     = 4
+        not_authorized  = 5
+        nothing_found   = 6
+        OTHERS          = 7.
+    IF sy-subrc <> 0.
+      MESSAGE e014(yfin_ufrs).
+      RETURN.
+    ENDIF.
+  ENDIF.
+
+  READ TABLE lt_signature ASSIGNING <signature> INDEX 1.
+  IF NOT sy-subrc IS INITIAL.
+    MESSAGE e014(yfin_ufrs).
+    RETURN.
+  ELSE.
+    iv_document-doc_id = <signature>-doc_id.
+    MOVE-CORRESPONDING iv_document TO ev_document.
+  ENDIF.
+
+ENDFUNCTION.
