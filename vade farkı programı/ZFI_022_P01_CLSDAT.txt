@@ -1,0 +1,1825 @@
+*&---------------------------------------------------------------------*
+*& Include          ZFI_022_P01_CLSDAT
+*&---------------------------------------------------------------------*
+
+*&---------------------------------------------------------------------*
+*&  Class           LCL_MVC_MODEL           Definition
+*&---------------------------------------------------------------------*
+CLASS lcl_mvc_model DEFINITION.
+  PUBLIC SECTION.
+
+    TYPES: BEGIN OF ty_bsid,
+             kunnr TYPE bsid-kunnr,
+             belnr TYPE bsid-belnr,
+             gjahr TYPE bsid-gjahr,
+             buzei TYPE bsid-buzei,
+             budat TYPE bsid-budat,
+             bldat TYPE bsid-bldat,
+             blart TYPE bsid-blart,
+             shkzg TYPE bsid-shkzg,
+             dmbtr TYPE bsid-dmbtr,
+             sgtxt TYPE bsid-sgtxt,
+             zfbdt TYPE bsid-zfbdt,
+             zbd1t TYPE bsid-zbd1t,
+             zbd2t TYPE bsid-zbd2t,
+             zbd3t TYPE bsid-zbd3t,
+             zterm TYPE bsid-zterm,
+             rebzg TYPE bsid-rebzg,
+             gsber TYPE bsid-gsber,
+             cpudt TYPE bsid-cpudt,
+             name1 TYPE kna1-name1,
+             ktokd TYPE kna1-ktokd,
+             xblnr TYPE bsid-xblnr,
+             awkey TYPE bkpf-awkey,
+           END OF ty_bsid.
+    DATA: t_bsid TYPE STANDARD TABLE OF ty_bsid.
+
+    TYPES: BEGIN OF ty_bsad,
+             kunnr TYPE bsad-kunnr,
+             belnr TYPE bsad-belnr,
+             gjahr TYPE bsad-gjahr,
+             buzei TYPE bsad-buzei,
+             budat TYPE bsad-budat,
+             bldat TYPE bsad-bldat,
+             blart TYPE bsad-blart,
+             shkzg TYPE bsad-shkzg,
+             dmbtr TYPE bsad-dmbtr,
+             sgtxt TYPE bsad-sgtxt,
+             zfbdt TYPE bsad-zfbdt,
+             zbd1t TYPE bsad-zbd1t,
+             zbd2t TYPE bsad-zbd2t,
+             zbd3t TYPE bsad-zbd3t,
+             zterm TYPE bsad-zterm,
+             rebzg TYPE bsad-rebzg,
+             gsber TYPE bsad-gsber,
+             cpudt TYPE bsad-cpudt,
+             name1 TYPE kna1-name1,
+             ktokd TYPE kna1-ktokd,
+             xblnr TYPE bsad-xblnr,
+             awkey TYPE bkpf-awkey,
+           END OF ty_bsad.
+    DATA: t_bsad TYPE STANDARD TABLE OF ty_bsad.
+
+    TYPES:
+      ty_outdat TYPE STANDARD TABLE OF zfi_022_s01.
+
+    DATA:
+      mt_outdat TYPE ty_outdat.
+
+    TYPES: mty_rng_kunnr TYPE RANGE OF kunnr,
+           mty_rng_ktokd TYPE RANGE OF ktokd,
+           mty_rng_budat TYPE RANGE OF budat,
+           mty_rng_bldat TYPE RANGE OF bldat,
+           mty_rng_blart TYPE RANGE OF blart.
+
+    METHODS:
+      constructor,
+      retrieve_dat
+        IMPORTING
+          iv_bukrs TYPE bukrs
+          iv_hkont TYPE hkont
+          iv_kunnr TYPE mty_rng_kunnr
+          iv_ktokd TYPE mty_rng_ktokd
+          iv_budat TYPE mty_rng_budat
+          iv_bldat TYPE mty_rng_bldat
+          iv_blart TYPE mty_rng_blart
+          iv_keyda TYPE budat
+        EXCEPTIONS
+          contains_error.
+
+ENDCLASS.
+*&---------------------------------------------------------------------*
+*&  Class           LCL_MVC_VIEW           Definition
+*&---------------------------------------------------------------------*
+CLASS lcl_mvc_view DEFINITION.
+  PUBLIC SECTION.
+
+    DATA:
+      mo_grid        TYPE REF TO cl_gui_alv_grid,
+      mo_dyndoc_id   TYPE REF TO cl_dd_document,
+      mo_splitter    TYPE REF TO cl_gui_splitter_container,
+      mo_parent_grid TYPE REF TO cl_gui_container,
+      mo_parent_top  TYPE REF TO cl_gui_container,
+      mo_html_cntrl  TYPE REF TO cl_gui_html_viewer,
+      mt_fieldcat    TYPE lvc_t_fcat.
+
+    TYPES: BEGIN OF ty_param,
+             param_id TYPE memoryid,
+             value    TYPE char100,
+           END  OF ty_param,
+           tt_params TYPE TABLE OF ty_param WITH DEFAULT KEY.
+
+    METHODS:
+      constructor
+        IMPORTING
+          io_model      TYPE REF TO lcl_mvc_model
+          io_controller TYPE REF TO lcl_mvc_controller,
+      call_transaction
+        IMPORTING
+          im_parameter TYPE tt_params
+          im_tcode     TYPE sy-tcode,
+      display_alvdat
+        EXCEPTIONS
+          contains_error.
+
+  PRIVATE SECTION.
+    CONSTANTS:
+      mc_strname TYPE tabname VALUE 'ZFI_022_S01'.
+
+    DATA:
+      mo_model      TYPE REF TO lcl_mvc_model,
+      mo_controller TYPE REF TO lcl_mvc_controller.
+
+    METHODS:
+      create_fieldcat
+        IMPORTING
+          !im_strname TYPE tabname
+        EXCEPTIONS
+          contains_error,
+      update_fieldcat
+        EXCEPTIONS
+          contains_error,
+      set_layout_dat
+        RETURNING
+          VALUE(rv_layoutdat) TYPE lvc_s_layo,
+      set_exclude_dat
+        RETURNING
+          VALUE(rv_excludedat) TYPE ui_functions,
+      attach_handlers
+        IMPORTING
+          VALUE(im_grid) TYPE REF TO cl_gui_alv_grid
+        EXCEPTIONS
+          contains_error,
+      refresh_alv
+        EXCEPTIONS
+          contains_error.
+
+
+ENDCLASS.                    "lcl_mvc_view DEFINITION
+*&---------------------------------------------------------------------*
+*&  Class           LCL_MVC_CONTROLLER           Definition
+*&---------------------------------------------------------------------*
+CLASS lcl_mvc_controller DEFINITION.
+  PUBLIC SECTION.
+    CONSTANTS:
+      mc_model TYPE seoclsname VALUE 'LCL_MVC_MODEL',
+      mc_view  TYPE seoclsname VALUE 'LCL_MVC_VIEW'.
+
+    METHODS:
+      constructor,
+      instantiate_app
+        IMPORTING
+          iv_model             TYPE seoclsname
+          iv_view              TYPE seoclsname
+        RETURNING
+          VALUE(ro_controller) TYPE REF TO lcl_mvc_controller,
+      initialization,
+      at_selection_screen_output,
+      at_selection_screen,
+      start_of_selection,
+      alv_session
+        EXCEPTIONS
+          contains_error,
+      get_last_day
+        CHANGING
+          iv_date TYPE syst_datum,
+      get_long_date
+        IMPORTING
+          !im_dat         TYPE datum
+        RETURNING
+          VALUE(r_dattxt) TYPE text40,
+      call_view_maintenance,
+      due_date
+        IMPORTING
+          im_zfbdt TYPE bsid-zfbdt
+          im_zbd1t TYPE bsid-zbd1t
+          im_zbd2t TYPE bsid-zbd2t
+          im_zbd3t TYPE bsid-zbd3t
+          im_shkzg TYPE bsid-shkzg
+          im_rebzg TYPE bsid-rebzg
+        EXPORTING
+          iv_zfbdt TYPE bsid-zfbdt,
+      get_selected_rows
+        EXCEPTIONS
+          contains_error,
+      display_popup_message
+        IMPORTING
+          im_titlebar      TYPE char20
+          im_question      TYPE char300
+        RETURNING
+          VALUE(rv_answer) TYPE char1,
+      calculate_tax
+        CHANGING
+          im_amount TYPE dmbtr
+        EXCEPTIONS
+          contains_error,
+      display_error
+        IMPORTING
+          it_msgdat TYPE bapiret2_tab
+        EXCEPTIONS
+          contains_error,
+      run_document
+        RETURNING
+          VALUE(rt_retdat) TYPE bapiret2_t
+        EXCEPTIONS
+          contains_error,
+      post_document
+        IMPORTING
+          VALUE(im_header)     TYPE bapiache09
+          VALUE(im_curramount) TYPE bapiaccr09_tab
+          VALUE(im_accountgl)  TYPE bapiacgl09_tab
+          VALUE(im_accountrec) TYPE bapiacar09_tab
+          VALUE(im_accounttax) TYPE bapiactx09_tab OPTIONAL
+          VALUE(im_criteria)   TYPE bapiackec9_tab OPTIONAL
+        EXPORTING
+          ev_obj_key           TYPE bapiache09-obj_key
+        RETURNING
+          VALUE(rt_return)     TYPE bapiret2_t,
+      rev_document
+        IMPORTING
+          VALUE(im_reversal) TYPE bapiacrev
+          VALUE(im_busact)   TYPE bapiache09-bus_act
+        EXPORTING
+          ev_objkey          TYPE bapiacrev-obj_key
+          et_return          TYPE bapiret2_tab,
+      run_rev_document
+        RETURNING
+          VALUE(rt_retdat) TYPE bapiret2_t
+        EXCEPTIONS
+          contains_error,
+      handle_hotspot_click FOR EVENT hotspot_click OF cl_gui_alv_grid
+        IMPORTING
+          e_column_id
+          es_row_no,
+      handle_toolbar_set FOR EVENT toolbar OF cl_gui_alv_grid
+        IMPORTING
+          e_object
+          e_interactive,
+      handle_change_finish FOR EVENT data_changed_finished OF cl_gui_alv_grid
+        IMPORTING
+          e_modified
+          et_good_cells,
+      handle_user_command FOR EVENT user_command OF cl_gui_alv_grid
+        IMPORTING
+          e_ucomm,
+      handle_top_of_page FOR EVENT top_of_page OF cl_gui_alv_grid
+        IMPORTING
+          e_dyndoc_id,
+      event_top_of_page
+        CHANGING
+          dg_dyndoc_id TYPE REF TO cl_dd_document,
+      display_top_of_page
+        IMPORTING
+          dg_dyndoc_id TYPE REF TO cl_dd_document.
+
+  PRIVATE SECTION.
+    DATA:
+      mo_model TYPE REF TO lcl_mvc_model,
+      mo_view  TYPE REF TO lcl_mvc_view.
+ENDCLASS.
+*&---------------------------------------------------------------------*
+*&  Class           LCL_MVC_VIEW           Implementation
+*&---------------------------------------------------------------------*
+CLASS lcl_mvc_model IMPLEMENTATION.
+  METHOD constructor.
+
+  ENDMETHOD.                    "constructor
+  METHOD retrieve_dat.
+
+    DATA: _rebzg TYPE bsad-rebzg.
+
+    SELECT ktopl, waers
+      FROM t001
+      INTO TABLE @DATA(t_t01)
+      WHERE bukrs EQ @iv_bukrs.
+
+    SELECT kna1~kunnr, kna1~name1, kna1~ktokd
+      FROM kna1
+      INNER JOIN knb1 ON kna1~kunnr EQ knb1~kunnr
+                     AND knb1~bukrs EQ @iv_bukrs
+      INTO TABLE @DATA(t_kna1)
+      WHERE kna1~kunnr IN @iv_kunnr
+        AND kna1~ktokd IN @iv_ktokd.
+
+    SELECT begda, endda, oran
+      FROM zfi_022_t04
+      INTO TABLE @DATA(t_rate).
+    SORT t_rate BY begda.
+
+    IF c_acik IS INITIAL.
+
+      SELECT bsid~kunnr, bsid~belnr, bsid~gjahr, bsid~buzei, bsid~budat, bsid~bldat,
+             bsid~blart, bsid~shkzg, bsid~dmbtr, bsid~sgtxt, bsid~zfbdt, bsid~zbd1t,
+             bsid~zbd2t, bsid~zbd3t, bsid~zterm, bsid~rebzg, bsid~gsber, bkpf~cpudt,
+             kna1~name1, kna1~ktokd, bsid~xblnr
+        FROM bsid
+        INNER JOIN bkpf
+          ON bsid~bukrs EQ bkpf~bukrs
+         AND bsid~belnr EQ bkpf~belnr
+         AND bsid~gjahr EQ bkpf~gjahr
+        INNER JOIN kna1
+          ON bsid~kunnr EQ kna1~kunnr
+        INTO TABLE @t_bsid
+          WHERE bsid~bukrs EQ @iv_bukrs
+            AND bsid~kunnr IN @iv_kunnr
+            AND bsid~budat IN @iv_budat
+            AND bsid~bldat IN @iv_bldat
+            AND bsid~blart IN @iv_blart
+            AND bsid~shkzg EQ 'S'
+            AND bsid~umskz EQ @space
+            AND bsid~augbl NE @space
+            AND bkpf~stblg EQ @space.
+
+      SELECT bsad~kunnr, bsad~belnr, bsad~gjahr, bsad~buzei, bsad~budat, bsad~bldat,
+             bsad~blart, bsad~shkzg, bsad~dmbtr, bsad~sgtxt, bsad~zfbdt, bsad~zbd1t,
+             bsad~zbd2t, bsad~zbd3t, bsad~zterm, bsad~rebzg, bsad~gsber, bsad~cpudt,
+             kna1~name1, kna1~ktokd, bsad~xblnr
+        FROM bsad
+        INNER JOIN bkpf
+          ON bsad~bukrs EQ bkpf~bukrs
+         AND bsad~belnr EQ bkpf~belnr
+         AND bsad~gjahr EQ bkpf~gjahr
+        INNER JOIN kna1 ON bsad~kunnr EQ kna1~kunnr
+      INTO TABLE @t_bsad
+      WHERE bsad~bukrs EQ @iv_bukrs
+        AND bsad~kunnr IN @iv_kunnr
+        AND bsad~budat IN @iv_budat
+        AND bsad~bldat IN @iv_bldat
+        AND bsad~blart IN @iv_blart
+        AND bsad~shkzg EQ 'S'
+        AND bsad~umskz EQ @space
+        AND bsad~augbl NE @space
+        AND bkpf~stblg EQ @space.
+
+      APPEND LINES OF t_bsad TO t_bsid.
+
+      SELECT bsid~rebzg, bkpf~cpudt
+        FROM bsid
+        INNER JOIN bkpf ON bsid~bukrs EQ bkpf~bukrs AND
+                          bsid~belnr EQ bkpf~belnr AND
+                          bsid~gjahr EQ bkpf~gjahr
+        INNER JOIN kna1 ON bsid~kunnr EQ kna1~kunnr
+        INTO TABLE @DATA(t_cpudt)
+          WHERE bsid~bukrs EQ @iv_bukrs
+            AND bsid~kunnr IN @iv_kunnr
+            AND bsid~budat IN @iv_budat
+            AND bsid~bldat IN @iv_bldat
+            AND bsid~blart IN @iv_blart
+            AND bsid~budat LE @iv_keyda
+            AND bsid~umskz EQ @space
+            AND bkpf~stblg EQ @space.
+
+      LOOP AT t_bsid ASSIGNING FIELD-SYMBOL(<bsid>).
+        READ TABLE t_cpudt ASSIGNING FIELD-SYMBOL(<cpudt>) WITH KEY rebzg = <bsid>-belnr.
+        IF sy-subrc IS INITIAL.
+          <bsid>-zfbdt = <cpudt>-cpudt.
+        ENDIF.
+      ENDLOOP.
+
+* atılmış kayıtları göstermek için
+*      SELECT DISTINCT kunnr, blart
+*        FROM bsid
+*        INTO TABLE @DATA(t_rd)
+*        WHERE bukrs = @iv_bukrs
+*          AND blart = 'RD'.
+
+    ELSE.
+
+      SELECT bsid~kunnr, bsid~belnr, bsid~gjahr, bsid~buzei, bsid~budat, bsid~bldat,
+             bsid~blart, bsid~shkzg, CASE WHEN shkzg EQ 'H' THEN CAST( wrbtr * -1 AS CURR( 23, 2 ) ) ELSE dmbtr END AS dmbtr,
+             bsid~sgtxt, bsid~zfbdt, bsid~zbd1t,
+             bsid~zbd2t, bsid~zbd3t, bsid~zterm, bsid~rebzg, bsid~gsber, bsid~cpudt,
+             kna1~name1, kna1~ktokd, bsid~xblnr
+       FROM bsid
+       INNER JOIN bkpf ON bsid~bukrs EQ bkpf~bukrs
+                      AND bsid~belnr EQ bkpf~belnr
+                      AND bsid~gjahr EQ bkpf~gjahr
+       INNER JOIN kna1 ON bsid~kunnr EQ kna1~kunnr
+       INTO TABLE @t_bsid
+       WHERE bsid~bukrs EQ @iv_bukrs
+         AND bsid~kunnr IN @iv_kunnr
+         AND bsid~budat IN @iv_budat
+         AND bsid~bldat IN @iv_bldat
+         AND bsid~blart IN @iv_blart
+         AND bsid~blart NE 'RD'
+         AND bsid~budat LE @iv_keyda
+         AND bsid~umskz EQ @space
+         AND bkpf~stblg EQ @space.
+
+      SELECT bsad~kunnr, bsad~belnr, bsad~gjahr, bsad~buzei, bsad~budat, bsad~bldat,
+             bsad~blart, bsad~shkzg, CASE WHEN shkzg EQ 'H' THEN CAST( wrbtr * -1 AS CURR( 23, 2 ) ) ELSE dmbtr END AS dmbtr,
+             bsad~sgtxt, bsad~zfbdt, bsad~zbd1t,
+             bsad~zbd2t, bsad~zbd3t, bsad~zterm, bsad~rebzg, bsad~gsber, bsad~cpudt,
+             kna1~name1, kna1~ktokd, bsad~xblnr
+        FROM bsad
+        INNER JOIN bkpf ON bsad~bukrs EQ bkpf~bukrs
+                       AND bsad~belnr EQ bkpf~belnr
+                       AND bsad~gjahr EQ bkpf~gjahr
+        INNER JOIN kna1 ON bsad~kunnr EQ kna1~kunnr
+        INTO TABLE @t_bsad
+        WHERE bsad~bukrs EQ @iv_bukrs
+          AND bsad~kunnr IN @iv_kunnr
+          AND bsad~budat IN @iv_budat
+          AND bsad~bldat IN @iv_bldat
+          AND bsad~blart IN @iv_blart
+          AND bsad~budat LE @iv_keyda
+          AND bsad~augdt GT @iv_keyda
+          AND bsad~umskz EQ @space
+          AND bkpf~stblg EQ @space.
+
+      APPEND LINES OF t_bsad TO t_bsid.
+
+      SELECT bsid~kunnr, t02~belnr,  bsid~gjahr, bsid~buzei, bsid~budat, bsid~bldat,
+             bsid~blart, bsid~shkzg, CASE WHEN shkzg EQ 'H' THEN CAST( wrbtr * -1 AS CURR( 23, 2 ) ) ELSE dmbtr END AS dmbtr,
+             bsid~sgtxt, bsid~zfbdt, bsid~zbd1t,
+             bsid~zbd2t, bsid~zbd3t, bsid~zterm, bsid~rebzg, bsid~gsber, bsid~cpudt,
+             kna1~name1, kna1~ktokd, bsid~xblnr, t02~awkey
+        FROM zfi_022_t02 AS t02
+        INNER JOIN bsid_view AS bsid ON bsid~bukrs = @iv_bukrs
+                                    AND bsid~kunnr = t02~kunnr
+                                    AND substring( t02~awkey,1,10 ) = bsid~belnr
+                                    AND substring( t02~awkey,11,4 ) = bsid~bukrs
+                                    AND substring( t02~awkey,15,4 ) = bsid~gjahr
+        INNER JOIN bkpf ON bsid~bukrs EQ bkpf~bukrs
+                       AND bsid~belnr EQ bkpf~belnr
+                       AND bsid~gjahr EQ bkpf~gjahr
+        INNER JOIN kna1 ON bsid~kunnr EQ kna1~kunnr
+        WHERE bsid~bukrs EQ @iv_bukrs
+          AND bkpf~blart EQ 'RD'
+          AND bsid~kunnr IN @iv_kunnr
+        INTO TABLE @DATA(t_matdat).
+
+      SORT t_matdat BY zfbdt DESCENDING.
+      LOOP AT t_bsid ASSIGNING <bsid>.
+        LOOP AT t_matdat ASSIGNING FIELD-SYMBOL(<matdat>) WHERE belnr = <bsid>-belnr AND gjahr = <bsid>-gjahr.
+          APPEND INITIAL LINE TO t_bsid ASSIGNING FIELD-SYMBOL(<bsid_add>).
+          <bsid_add> =  VALUE #( BASE <matdat> belnr = <matdat>-awkey(10) ).
+          IF ( <bsid>-blart NE 'RD' OR <bsid>-blart NE 'DN' ) AND <bsid>-awkey IS INITIAL.
+            <bsid>-awkey = <matdat>-awkey.
+          ENDIF.
+        ENDLOOP.
+      ENDLOOP.
+
+* atılmış kayıtları göstermek için
+*      SELECT DISTINCT kunnr, blart
+*        FROM bsid
+*        INTO TABLE @t_rd
+*        WHERE bukrs = @iv_bukrs
+*          AND blart = 'RD'.
+
+    ENDIF.
+
+    IF t_bsid IS NOT INITIAL.
+
+      SELECT t02~kunnr, t02~belnr, t02~gjahr, t02~buzei, t02~budat, t02~awkey AS vfawkey
+        FROM zfi_022_t02 AS t02
+        INNER JOIN bkpf ON t02~awkey  EQ bkpf~awkey
+                       AND bkpf~awtyp EQ 'BKPFF'
+                       AND bkpf~stblg EQ @space
+        INTO TABLE @DATA(t_t02)
+        FOR ALL ENTRIES IN @t_bsid
+        WHERE t02~bukrs EQ @iv_bukrs
+          AND t02~belnr EQ @t_bsid-belnr
+          AND t02~gjahr EQ @t_bsid-gjahr
+          AND t02~kunnr EQ @t_bsid-kunnr
+          AND t02~buzei EQ @t_bsid-buzei.
+
+      SELECT t02~kunnr, t02~belnr, t02~gjahr, t02~buzei, t02~budat, t02~awkey
+        FROM zfi_022_t02 AS t02
+        APPENDING TABLE @t_t02
+        FOR ALL ENTRIES IN @t_bsid
+        WHERE t02~bukrs EQ @iv_bukrs
+          AND t02~belnr EQ @t_bsid-belnr
+          AND t02~gjahr EQ @t_bsid-gjahr
+          AND t02~kunnr EQ @t_bsid-kunnr
+          AND t02~buzei EQ @t_bsid-buzei
+          AND t02~awkey EQ @mc_awkey.
+
+      SELECT belnr, bukrs, gjahr,kostl
+        FROM bseg
+        FOR ALL ENTRIES IN @t_bsid
+        WHERE bukrs EQ @iv_bukrs
+          AND belnr EQ @t_bsid-belnr
+          AND gjahr EQ @t_bsid-gjahr
+          AND kostl NE @space
+        INTO TABLE @DATA(t_kostl).
+
+      SORT t_t02 BY kunnr belnr gjahr buzei ASCENDING budat DESCENDING.
+    ENDIF.
+
+    LOOP AT t_bsid ASSIGNING <bsid>.
+      _controller->due_date(
+        EXPORTING
+          im_zfbdt = <bsid>-zfbdt
+          im_zbd1t = <bsid>-zbd1t
+          im_zbd2t = <bsid>-zbd2t
+          im_zbd3t = <bsid>-zbd3t
+          im_shkzg = <bsid>-shkzg
+          im_rebzg = <bsid>-rebzg
+        IMPORTING
+          iv_zfbdt = <bsid>-zfbdt ).
+      IF <bsid>-rebzg IS INITIAL.
+        <bsid>-rebzg = VALUE #( t_bsid[ belnr = <bsid>-belnr ]-rebzg OPTIONAL ).
+      ELSEIF <bsid>-rebzg IS NOT INITIAL AND <bsid>-blart EQ 'DN'.
+
+        WHILE _rebzg IS INITIAL.
+
+          SELECT belnr, budat, bldat, rebzg
+            FROM bsid
+            INTO TABLE @DATA(t_rebzg)
+            WHERE belnr = @<bsid>-rebzg
+              AND bukrs = @iv_bukrs.
+          IF sy-subrc IS INITIAL.
+            READ TABLE t_rebzg ASSIGNING FIELD-SYMBOL(<rebzg>) WITH KEY belnr = <bsid>-rebzg.
+            IF sy-subrc IS INITIAL.
+              <bsid>-budat = <bsid>-bldat = <rebzg>-budat.
+              _rebzg = abap_true.
+            ENDIF.
+          ELSE.
+            _rebzg = abap_true.
+          ENDIF.
+        ENDWHILE.
+        CLEAR: _rebzg.
+      ENDIF.
+    ENDLOOP.
+
+    DELETE t_bsid WHERE blart NE 'RD' AND zfbdt GT p_keydat.
+
+    DATA: day    TYPE char2,
+          day1   TYPE char2,
+          day2   TYPE char2,
+          month  TYPE monat,
+          month1 TYPE monat,
+          month2 TYPE monat,
+          year1  TYPE gjahr,
+          year2  TYPE gjahr,
+          begda1 TYPE datum,
+          endda1 TYPE datum,
+          begda2 TYPE datum,
+          endda2 TYPE datum,
+          begda3 TYPE datum,
+          endda3 TYPE datum,
+          begda4 TYPE datum,
+          endda4 TYPE datum.
+
+    LOOP AT t_bsid ASSIGNING <bsid>.
+
+      APPEND INITIAL LINE TO mt_outdat ASSIGNING FIELD-SYMBOL(<outdat>).
+      <outdat> = CORRESPONDING #( <bsid> ).
+      <outdat>-bukrs = iv_bukrs.
+      <outdat>-hkont = iv_hkont.
+*      <outdat>-blart = VALUE #( t_rd[ kunnr = <outdat>-kunnr ]-blart OPTIONAL ).
+      <outdat>-keydat = iv_keyda.
+      <outdat>-msgshw = icon_message_faulty_orphan.
+      DATA(awkey) = |{ <outdat>-belnr }{ <outdat>-bukrs }{ <bsid>-budat(4) }|.
+      <outdat>-vfbelnr = VALUE #( t_t02[ vfawkey = awkey ]-belnr OPTIONAL ).
+      <outdat>-vfbelnr = COND #( WHEN <outdat>-vfbelnr IS INITIAL THEN <bsid>-belnr ELSE <outdat>-vfbelnr ).
+      IF <bsid>-blart NE 'DN' AND <bsid>-blart NE 'RD'.
+        <outdat>-light = icon_yellow_light.
+        <outdat>-kalan = <bsid>-dmbtr.
+        <outdat>-dmbtr = <bsid>-dmbtr - REDUCE dmbtr( INIT i TYPE dmbtr FOR <wa> IN t_bsid
+                              WHERE ( kunnr EQ <bsid>-kunnr AND
+                                      shkzg EQ 'H' AND
+                                      blart EQ 'DN' )
+                              NEXT i = i + <wa>-dmbtr ).
+      ELSEIF <bsid>-blart EQ 'DN' OR <bsid>-blart EQ 'RD'.
+        <outdat>-light = icon_green_light.
+      ENDIF.
+      <outdat>-kostl = VALUE #( t_kostl[ bukrs = iv_bukrs belnr = <bsid>-belnr gjahr = <bsid>-gjahr ]-kostl OPTIONAL ).
+
+      READ TABLE t_matdat INTO DATA(_matdat) WITH KEY awkey = <bsid>-awkey.
+      IF sy-subrc IS INITIAL.
+        IF iv_keyda LE _matdat-zfbdt.
+          <outdat>-belnr = _matdat-belnr.
+          <outdat>-vfawkey = |{ _matdat-awkey(10) }{ p_bukrs }{ _matdat-gjahr }|.
+          <outdat>-sonvd = _matdat-zfbdt.
+          <outdat>-light = icon_green_light.
+        ELSE.
+          <outdat>-belnr = _matdat-belnr.
+          <outdat>-vfawkey = |{ _matdat-awkey(10) }{ p_bukrs }{ _matdat-gjahr }|.
+          <outdat>-sonvd = _matdat-zfbdt.
+        ENDIF.
+      ENDIF.
+      <outdat>-zfbdt = COND #( WHEN <outdat>-sonvd IS NOT INITIAL THEN <outdat>-sonvd ELSE <outdat>-zfbdt ).
+      <outdat>-keydat = iv_keyda.
+
+*--------------------------------------------------------------------*
+*       ORAN HESAPLAMALARI
+*--------------------------------------------------------------------*
+
+      DATA: flag TYPE flag.
+      CLEAR: flag.
+      LOOP AT t_rate ASSIGNING FIELD-SYMBOL(<rate>).
+        IF <outdat>-zfbdt LE <rate>-endda.
+          ADD 1 TO flag.
+        ENDIF.
+      ENDLOOP.
+
+      <outdat>-vforan1 = mc_vforan1.    <outdat>-vforan2 = mc_vforan2.  <outdat>-vforan3 = mc_vforan3. <outdat>-vforan4 = mc_vforan4.
+
+      begda1 = t_rate[ oran = mc_vforan1 ]-begda. endda1 = t_rate[ oran = mc_vforan1 ]-endda.
+      begda2 = t_rate[ oran = mc_vforan2 ]-begda. endda2 = t_rate[ oran = mc_vforan2 ]-endda.
+      begda3 = t_rate[ oran = mc_vforan3 ]-begda. endda3 = t_rate[ oran = mc_vforan3 ]-endda.
+      begda4 = t_rate[ oran = mc_vforan4 ]-begda. endda4 = t_rate[ oran = mc_vforan4 ]-endda.
+
+      day1 = COND #( WHEN <outdat>-zfbdt+6(2) GE 30 THEN 30 ELSE <outdat>-zfbdt+6(2) ).
+      month1 = <outdat>-zfbdt+4(2).
+      year1 = <outdat>-zfbdt(4).
+
+      day2 = <outdat>-keydat+6(2).
+      month2 = <outdat>-keydat+4(2).
+      year2 = <outdat>-keydat(4).
+
+      CLEAR: day, month.
+      IF <outdat>-zfbdt LE endda1.
+
+        day2 = endda1+6(2).        month2 = endda1+4(2).        year2 = endda1(4).
+
+*--------------------------------------------------------------------*
+*  ORAN 1   -> 1.60
+*--------------------------------------------------------------------*
+        IF year1 = year2.
+          IF day1 <= day2.
+            month = COND #( WHEN day1 LE day2 THEN ( month2 - month1 ) + 1 ELSE month2 - month1 ).
+            <outdat>-vfgun1 = month * 30.
+          ELSEIF day2 < day1.
+            month = month2 - month1.
+            <outdat>-vfgun1 = month * 30.
+          ENDIF.
+        ELSEIF year2 > year1.
+          IF day1 <= day2.
+            month = month2 - month1.
+            <outdat>-vfgun1 = month * 30.
+          ELSEIF day2 < day1.
+            month = month2 - month1.
+            <outdat>-vfgun1 = month * 30.
+          ENDIF.
+        ENDIF.
+        <outdat>-vftut1 = ( month * <outdat>-vforan1 * <outdat>-dmbtr ) / 100.
+
+      ENDIF.
+      IF <outdat>-zfbdt LE endda2.
+
+*--------------------------------------------------------------------*
+*  ORAN 2   -> 2.50
+*--------------------------------------------------------------------*
+        CLEAR: day, month.
+        IF <outdat>-zfbdt LE endda2.
+          day1 = COND #( WHEN <outdat>-zfbdt+6(2) GE 30 THEN 30 ELSE <outdat>-zfbdt+6(2) ).  month1 = <outdat>-zfbdt+4(2).   year1 = <outdat>-zfbdt(4).
+        ELSE.
+          day1 = begda2+6(2).                                                                month1 = begda2+4(2).           year1 = begda2(4).
+        ENDIF.
+
+        day2 = endda2+6(2).                                                                  month2 = endda2+4(2).           year2 = endda2(4).
+
+        IF year1 = year2.
+          IF day1 <= day2.
+*            day = COND #( WHEN day1 = day2 THEN 0 ELSE ( day2 - day1 ) ).
+            month = COND #( WHEN day1 LE day2 THEN ( month2 - month1 ) + 1 ELSE month2 - month1 ).
+            <outdat>-vfgun2 = ( month * 30 + day ).
+            <outdat>-vfgun2 = COND #( WHEN <outdat>-vfgun2 LT 0 THEN <outdat>-vfgun2 * -1 ELSE <outdat>-vfgun2 ).
+            <outdat>-vftut2 = ( ( month * <outdat>-vforan2 * <outdat>-dmbtr ) / 100 ) + ( <outdat>-dmbtr * ( mc_dayrate2 * day ) ).
+
+          ELSEIF day2 < day1.
+            month = COND #( WHEN day1 LE day2 THEN ( month2 - month1 ) + 1 ELSE month2 - month1 ).
+            <outdat>-vfgun2 = ( ( month2 - month1 - 1 ) + ( 31 - day1 + day2 ) ).
+            <outdat>-vfgun2 = COND #( WHEN <outdat>-vfgun2 LT 0 THEN <outdat>-vfgun2 * -1 ELSE <outdat>-vfgun2 ).
+            <outdat>-vftut2 = ( ( month * <outdat>-vforan2 * <outdat>-dmbtr ) / 100 ) + ( <outdat>-dmbtr * ( mc_dayrate4 * day ) ).
+          ENDIF.
+        ELSEIF year2 > year1.
+          IF day1 <= day2.
+*            day = COND #( WHEN <outdat>-zfbdt+6(2) = <outdat>-keydat+6(2) THEN 0 ELSE ( day2 - day1 ) ).
+*            month = COND #( WHEN day1 GE begda2+6(2) THEN ( ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) - 1 ) + 1 ELSE ( ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) - 1 ) ).
+            IF day1 GE endda2+6(2).
+              month = ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ).
+            ELSE.
+              month = ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) + 1.
+            ENDIF.
+*            month = ( ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) - 1 ).
+            <outdat>-vfgun2 = ( ( month * 30 ) + day ).
+            <outdat>-vfgun2 = COND #( WHEN <outdat>-vfgun2 LT 0 THEN <outdat>-vfgun2 * -1 ELSE <outdat>-vfgun2 ).
+            <outdat>-vftut2 = ( ( month * <outdat>-vforan2 * <outdat>-dmbtr ) / 100 ) + ( <outdat>-dmbtr * ( mc_dayrate4 * day ) ).
+          ELSEIF day2 < day1.
+*            day = COND #( WHEN day1 = day2 THEN 0 ).
+*            day = COND #( WHEN day1 GE '28' THEN ( 30 - 30 + day2 ) ELSE ( 30 - day1 + day2 ) ).
+*            month = COND #( WHEN <outdat>-zfbdt+6(2) lt day1 THEN ( ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) - 1 ) ELSE ( ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) ) ).
+            IF <outdat>-zfbdt+6(2) LT day1 AND <outdat>-zfbdt+6(2) GT endda2+6(2).
+              month = ( ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) - 1 ).
+            ELSE."if <outdat>-zfbdt+6(2) LT day1.
+              month = ( ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) ).
+            ENDIF.
+            <outdat>-vfgun2 = ( month * 30 + day ).
+            <outdat>-vfgun2 = COND #( WHEN <outdat>-vfgun2 LT 0 THEN <outdat>-vfgun2 * -1 ELSE <outdat>-vfgun2 ).
+            <outdat>-vftut2 = ( ( month * <outdat>-vforan2 * <outdat>-dmbtr ) / 100 ) + ( <outdat>-dmbtr * ( mc_dayrate4 * day ) ).
+          ENDIF.
+        ENDIF.
+      ENDIF.
+
+      CLEAR: day, month.
+      IF <outdat>-zfbdt LE endda3.
+
+        IF <outdat>-zfbdt GE begda3.
+          day1 = COND #( WHEN <outdat>-zfbdt+6(2) GE 30 THEN 30 ELSE <outdat>-zfbdt+6(2) ).  month1 = <outdat>-zfbdt+4(2).   year1 = <outdat>-zfbdt(4).
+        ELSE.
+          day1 = begda3+6(2).                                                                month1 = begda3+4(2).           year1 = begda3(4).
+        ENDIF.
+
+        IF p_keydat GT endda3.
+          day2 = endda3+6(2).                                                                  month2 = endda3+4(2).                 year2 = endda3(4).
+        ELSE.
+          day2 = <outdat>-keydat+6(2).                                                         month2 = <outdat>-keydat+4(2).        year2 = <outdat>-keydat(4).
+        ENDIF.
+*--------------------------------------------------------------------*
+*  ORAN 3   -> 3.50
+*--------------------------------------------------------------------*
+        IF year1 = year2.
+          IF day1 <= day2.
+            day = COND #( WHEN ( day2 - day1 ) LE 1 THEN 0 ELSE ( day2 - day1 ) ).
+*            month = COND #( WHEN day1 LE day2 THEN ( month2 - month1 ) + 1 ELSE month2 - month1 ).
+            month = COND #( WHEN day NE 0 THEN ( ( month2 - month1 ) + 1 ) ELSE ( month2 - month1 ) ).
+            <outdat>-vfgun3 = ( ( month * 30 ) ).
+            CLEAR: day.
+          ELSEIF day2 < day1.
+*            day = ( 30 - day1 + day2 ).
+            month = COND #( WHEN day1 GT day2 THEN ( month2 - month1 ) ELSE ( month2 - month1 + 1 ) ).
+            <outdat>-vfgun3 = ( ( month * 30 ) ).
+            <outdat>-vfgun3 = COND #( WHEN <outdat>-vfgun3 LT 0 THEN <outdat>-vfgun3 * -1 ELSE <outdat>-vfgun3 ).
+          ENDIF.
+        ELSEIF year2 > year1.
+          IF day1 <= day2.
+*            day = day2 - day1.
+            month = COND #( WHEN <outdat>-zfbdt+6(2) GE day1 AND <outdat>-zfbdt+6(2) LE endda3+6(2) THEN ( ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) + 1 ) ELSE ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) ).
+            <outdat>-vfgun3 = ( month * 30 ) + day.
+          ELSEIF day2 < day1.
+            month = ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ).
+            <outdat>-vfgun3 = month * 30.
+          ENDIF.
+        ENDIF.
+        <outdat>-vftut3 = ( ( month * <outdat>-vforan3 * <outdat>-dmbtr ) / 100 ) + ( <outdat>-dmbtr * ( mc_dayrate3 * day ) ).
+      ENDIF.
+*--------------------------------------------------------------------*
+*  ORAN 4   -> 4.50
+*--------------------------------------------------------------------*
+      DATA: _last_date1 TYPE datum.
+      _last_date1 = <outdat>-keydat.
+      _controller->get_last_day( CHANGING iv_date = _last_date1 ).
+
+      IF <outdat>-keydat GT begda4.
+        CLEAR: month.
+        IF <outdat>-zfbdt GT endda3.
+          day1 = <outdat>-zfbdt+6(2).                                                                  month1 = <outdat>-zfbdt+4(2).         year1 = <outdat>-zfbdt(4).
+        ELSE.
+          day1 = day1 = COND #( WHEN <outdat>-zfbdt+6(2) GE 30 THEN 30 ELSE <outdat>-zfbdt+6(2) ).     month1 = <outdat>-zfbdt+4(2).                 year1 = <outdat>-zfbdt(4).
+        ENDIF.
+        day2 = <outdat>-keydat+6(2).                                                                   month2 = <outdat>-keydat+4(2).        year2 = <outdat>-keydat(4).
+
+        IF day2 EQ _last_date1+6(2) AND day1 GE 29.
+          day1 = _last_date1+6(2).
+        ENDIF.
+
+        IF year1 = year2.
+          IF day1 <= day2.
+            day = COND #( WHEN ( day2 - day1 ) LE 1 THEN 0 ELSE ( day2 - day1 ) ).
+            month = COND #( WHEN <outdat>-zfbdt+6(2) GE begda4+6(2) AND <outdat>-zfbdt+6(2) LE endda4+6(2) THEN ( month2 - month1 ) ELSE ( ( month2 - month1 ) - 1 ) ).
+*            month = COND #( WHEN ( day1 GE day2 ) AND <outdat>-zfbdt+6(2) LE endda4+6(2) THEN ( month2 - month1 ) ELSE ( ( month2 - month1 ) - 1 ) ).
+            <outdat>-vfgun4 = ( ( month2 - month1 ) * 30 ) +  day .
+            <outdat>-vfgun4 = COND #( WHEN <outdat>-vfgun4 LT 0 THEN <outdat>-vfgun4 * -1 ELSE <outdat>-vfgun4 ).
+            <outdat>-vftut4 = ( ( month * <outdat>-vforan4 * <outdat>-dmbtr ) / 100 ) + ( <outdat>-dmbtr * ( mc_dayrate4 * day ) ).
+          ELSEIF day2 < day1.
+            day = ( 30 - day1 + day2 ) + 1.
+            month = COND #( WHEN <outdat>-zfbdt+6(2) GE begda4+6(2) AND <outdat>-zfbdt+6(2) LE endda4+6(2) THEN  ( month2 - month1 ) - 1 ELSE ( ( ( month2 - month1 ) - 2 ) ) ).
+*            month = COND #( WHEN ( day1 GT day2 ) THEN ( month2 - month1 ) ELSE ( ( month2 - month1 ) - 1 ) ).
+            <outdat>-vfgun4 = ( ( month * 30 ) + day ).
+            <outdat>-vfgun4 = COND #( WHEN <outdat>-vfgun4 LT 0 THEN <outdat>-vfgun4 * -1 ELSE <outdat>-vfgun4 ).
+            <outdat>-vftut4 = ( ( month * <outdat>-vforan4 * <outdat>-dmbtr ) / 100 ) + ( <outdat>-dmbtr * ( mc_dayrate4 * day ) ).
+          ENDIF.
+        ELSEIF year2 > year1.
+          IF day1 <= day2.
+            day = COND #( WHEN ( day2 - day1 ) LE 1 THEN 0 ELSE ( day2 - day1 ) ).  "day = ( 30 - day1 + day2 ).
+            month = ( ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) - 1 ).
+            <outdat>-vfgun4 = ( ( month * 30 ) + day ).
+            <outdat>-vfgun4 = COND #( WHEN <outdat>-vfgun4 LT 0 THEN <outdat>-vfgun4 * -1 ELSE <outdat>-vfgun4 ).
+            <outdat>-vftut4 = ( ( month * <outdat>-vforan4 * <outdat>-dmbtr ) / 100 ) + ( <outdat>-dmbtr * ( mc_dayrate4 * day ) ).
+          ELSEIF day2 < day1.
+            day = COND #( WHEN day1 GE '28' THEN ( 30 - 30 + day2 ) ELSE ( 30 - day1 + day2 ) ).
+            month = ( ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) - 2 ).
+            <outdat>-vfgun4 = ( ( ( ( ( month2 + ( year2 - year1 ) * 12 ) - month1 ) - 1 ) * 30 ) + day ).
+            <outdat>-vfgun4 = COND #( WHEN <outdat>-vfgun4 LT 0 THEN <outdat>-vfgun4 * -1 ELSE <outdat>-vfgun4 ).
+            <outdat>-vftut4 = ( ( month * <outdat>-vforan4 * <outdat>-dmbtr ) / 100 ) + ( <outdat>-dmbtr * ( mc_dayrate4 * day ) ).
+          ENDIF.
+        ENDIF.
+      ENDIF.
+*--------------------------------------------------------------------*
+*  ORAN HESAPLAMALARI
+*--------------------------------------------------------------------*
+
+      <outdat>-vftot = <outdat>-vftut1 + <outdat>-vftut2 + <outdat>-vftut3 + <outdat>-vftut4.
+    ENDLOOP.
+    SORT mt_outdat BY belnr vfbelnr.
+    DELETE mt_outdat WHERE blart EQ 'DN' AND dmbtr GE 0.
+  ENDMETHOD.
+ENDCLASS.                    "lcl_mvc_model IMPLEMENTATION
+*&---------------------------------------------------------------------*
+*&  Class           LCL_MVC_VIEW           Implementation
+*&---------------------------------------------------------------------*
+CLASS lcl_mvc_view IMPLEMENTATION.
+
+  METHOD constructor.
+    mo_model = io_model.
+    mo_controller = io_controller.
+  ENDMETHOD.                    "constructor
+  METHOD display_alvdat.
+
+    IF mo_grid IS NOT BOUND.
+*-&Create TOP-Document
+      CREATE OBJECT mo_dyndoc_id
+        EXPORTING
+          style = 'ALV_GRID'.
+
+      CREATE OBJECT mo_splitter
+        EXPORTING
+          parent  = cl_gui_custom_container=>screen0
+          rows    = 2
+          columns = 1.
+
+      CALL METHOD mo_splitter->get_container
+        EXPORTING
+          row       = 1
+          column    = 1
+        RECEIVING
+          container = mo_parent_top.
+
+      CALL METHOD mo_splitter->get_container
+        EXPORTING
+          row       = 2
+          column    = 1
+        RECEIVING
+          container = mo_parent_grid.
+
+      CALL METHOD mo_splitter->set_row_height
+        EXPORTING
+          id     = 1
+          height = 12.
+
+      CREATE OBJECT mo_grid
+        EXPORTING
+          i_parent          = mo_parent_grid
+          i_lifetime        = cl_gui_alv_grid=>lifetime_dynpro
+        EXCEPTIONS
+          error_cntl_create = 1
+          error_cntl_init   = 2
+          error_cntl_link   = 3
+          error_dp_create   = 4
+          OTHERS            = 5.
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 RAISING contains_error.
+      ENDIF.
+
+      create_fieldcat(
+        EXPORTING
+          im_strname     = mc_strname
+        EXCEPTIONS
+          contains_error = 1
+          OTHERS         = 2 ).
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 RAISING contains_error.
+      ENDIF.
+
+      update_fieldcat(
+        EXCEPTIONS
+          contains_error = 1
+          OTHERS         = 2 ).
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 RAISING contains_error.
+      ENDIF.
+
+      attach_handlers(
+        EXPORTING
+          im_grid        = mo_grid
+        EXCEPTIONS
+          contains_error = 1
+          OTHERS         = 2 ).
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 RAISING contains_error.
+      ENDIF.
+
+      mo_grid->set_table_for_first_display(
+        EXPORTING
+          i_buffer_active               = space
+          i_bypassing_buffer            = abap_true
+          is_layout                     = set_layout_dat( )
+          it_toolbar_excluding          = CONV #( set_exclude_dat( ) )
+        CHANGING
+          it_fieldcatalog               = mt_fieldcat
+          it_outtab                     = mo_model->mt_outdat
+        EXCEPTIONS
+          invalid_parameter_combination = 1
+          program_error                 = 2
+          too_many_lines                = 3
+          OTHERS                        = 4 ).
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 RAISING contains_error.
+      ENDIF.
+
+      CALL METHOD mo_dyndoc_id->initialize_document
+        EXPORTING
+          background_color = cl_dd_area=>col_textarea.
+
+      CALL METHOD mo_grid->list_processing_events
+        EXPORTING
+          i_event_name = 'TOP_OF_PAGE'
+          i_dyndoc_id  = mo_dyndoc_id.
+    ELSE.
+      refresh_alv(
+        EXCEPTIONS
+          contains_error = 1
+          OTHERS         = 2 ).
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 RAISING contains_error.
+      ENDIF.
+    ENDIF.
+
+  ENDMETHOD.                    "display
+  METHOD create_fieldcat.
+
+    FREE: mt_fieldcat.
+    CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+      EXPORTING
+        i_structure_name       = im_strname
+      CHANGING
+        ct_fieldcat            = mt_fieldcat
+      EXCEPTIONS
+        inconsistent_interface = 1
+        program_error          = 2
+        OTHERS                 = 3.
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 RAISING contains_error.
+    ENDIF.
+
+  ENDMETHOD.                    "create_fieldcat
+  METHOD update_fieldcat.
+
+    DATA: _text(40) TYPE c.
+    LOOP AT mt_fieldcat REFERENCE INTO DATA(r_fieldcat).
+      CLEAR: _text.
+      CASE r_fieldcat->fieldname .
+        WHEN 'SELKZ'.
+          r_fieldcat->tech = abap_true.
+        WHEN 'VFBELNR'.
+          _text = TEXT-f01.
+        WHEN 'DMBTR'.
+          _text = TEXT-f02.
+        WHEN 'KALAN'.
+          _text = TEXT-f03.
+        WHEN 'ZFBDT'.
+          _text = TEXT-f04.
+        WHEN 'KEYDAT'.
+          _text = TEXT-f05.
+        WHEN 'SONVD'.
+          _text = TEXT-f06.
+        WHEN 'VFTOT'.
+          r_fieldcat->edit = abap_true.
+          _text = TEXT-f07.
+        WHEN 'VFAWKEY'.
+          _text = TEXT-f08.
+          r_fieldcat->hotspot = abap_true.
+        WHEN 'MSGSHW'.
+          r_fieldcat->hotspot = abap_true.
+          r_fieldcat->just = 'C'.
+      ENDCASE.
+      IF _text <> space.
+        MOVE _text TO: r_fieldcat->scrtext_l, r_fieldcat->scrtext_m, r_fieldcat->scrtext_s, r_fieldcat->reptext.
+      ENDIF.
+    ENDLOOP.
+
+  ENDMETHOD.                    "update_fieldcat
+  METHOD set_layout_dat.
+
+    rv_layoutdat = VALUE lvc_s_layo( col_opt = abap_true cwidth_opt = abap_true zebra = abap_true sel_mode = 'D' ).
+
+  ENDMETHOD.                    "set_layout_dat
+  METHOD set_exclude_dat.
+
+    rv_excludedat = VALUE #( ( cl_gui_alv_grid=>mc_fc_loc_copy_row ) ( cl_gui_alv_grid=>mc_fc_loc_delete_row ) ( cl_gui_alv_grid=>mc_fc_loc_append_row ) ( cl_gui_alv_grid=>mc_fc_loc_insert_row ) ( cl_gui_alv_grid=>mc_fc_loc_move_row )
+                             ( cl_gui_alv_grid=>mc_fc_loc_copy ) ( cl_gui_alv_grid=>mc_fc_loc_cut ) ( cl_gui_alv_grid=>mc_fc_loc_paste ) ( cl_gui_alv_grid=>mc_fc_loc_paste_new_row ) ( cl_gui_alv_grid=>mc_fc_loc_undo )
+                             ( cl_gui_alv_grid=>mc_fc_graph ) ( cl_gui_alv_grid=>mc_fc_info ) ( cl_gui_alv_grid=>mc_fc_refresh ) ( cl_gui_alv_grid=>mc_fc_print ) ( cl_gui_alv_grid=>mc_fc_detail ) ) .
+
+  ENDMETHOD.                    "set_exclude_dat
+  METHOD attach_handlers.
+
+    CALL METHOD im_grid->register_edit_event
+      EXPORTING
+        i_event_id = cl_gui_alv_grid=>mc_evt_modified.
+
+    SET HANDLER mo_controller->handle_hotspot_click FOR im_grid.
+    SET HANDLER mo_controller->handle_toolbar_set   FOR im_grid.
+    SET HANDLER mo_controller->handle_change_finish FOR im_grid.
+    SET HANDLER mo_controller->handle_user_command  FOR im_grid.
+    SET HANDLER mo_controller->handle_top_of_page   FOR im_grid.
+  ENDMETHOD.                    "attach_handlers
+  METHOD call_transaction.
+
+    LOOP AT im_parameter INTO DATA(wa_param).
+      SET PARAMETER ID wa_param-param_id FIELD wa_param-value.
+    ENDLOOP.
+    IF sy-subrc IS INITIAL AND
+       im_tcode IS NOT INITIAL.
+      CALL TRANSACTION im_tcode AND SKIP FIRST SCREEN.
+    ENDIF.
+
+  ENDMETHOD.                      "call_transaction
+  METHOD refresh_alv.
+
+    mo_grid->refresh_table_display(
+      EXPORTING
+        is_stable = VALUE #( row = abap_true col = abap_true )
+      EXCEPTIONS
+        finished  = 1
+        OTHERS    = 2 ).
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 RAISING contains_error.
+    ENDIF.
+
+  ENDMETHOD.                    "refresh_alv
+ENDCLASS.                    "lcl_mvc_view IMPLEMENTATION
+*&---------------------------------------------------------------------*
+*&  Class           LCL_MVC_CONTROLLER           Implementation
+*&---------------------------------------------------------------------*
+CLASS lcl_mvc_controller IMPLEMENTATION.
+  METHOD constructor.
+
+  ENDMETHOD.                    "constructor
+  METHOD instantiate_app.
+
+    DATA: lo_object TYPE REF TO object.
+
+    ro_controller = NEW lcl_mvc_controller( ).
+
+    FREE: lo_object.
+    CREATE OBJECT lo_object TYPE (iv_model).
+    IF lo_object IS BOUND.
+      mo_model ?= lo_object.
+      ro_controller->mo_model ?= mo_model.
+    ENDIF.
+
+    FREE: lo_object.
+    CREATE OBJECT lo_object TYPE (iv_view)
+      EXPORTING
+        io_model      = ro_controller->mo_model
+        io_controller = me.
+    IF lo_object IS BOUND.
+      mo_view ?= lo_object.
+      ro_controller->mo_view ?= mo_view.
+    ENDIF.
+
+  ENDMETHOD.                    "instantiate_app
+  METHOD initialization.
+
+    sscrfields-functxt_01 = VALUE smp_dyntxt( text = TEXT-b01 icon_id = icon_view_table icon_text = TEXT-b01 ).
+
+  ENDMETHOD.                    "initialization
+  METHOD at_selection_screen_output.
+
+    LOOP AT SCREEN.
+      IF screen-name = 'P_BUKRS' OR screen-name = 'P_KEYDAT' OR screen-name = 'P_BUDAT' OR screen-name = 'P_HKONT'.
+        screen-required = 2.
+      ENDIF.
+      MODIFY SCREEN.
+    ENDLOOP.
+
+  ENDMETHOD.                    "at_selection_screen_output
+  METHOD at_selection_screen.
+
+    IF sscrfields-ucomm = 'FC01'.
+      _controller->call_view_maintenance( ).
+    ENDIF.
+    IF ( p_bukrs IS INITIAL OR p_keydat IS INITIAL OR p_budat IS INITIAL OR p_hkont IS INITIAL ) AND sy-ucomm NE 'FC01'.
+      MESSAGE e001(00) WITH 'Tüm zorunlu alanları doldurunuz!'.
+    ENDIF.
+
+  ENDMETHOD.                    "at_selection_screen
+  METHOD start_of_selection.
+
+    mo_model->retrieve_dat(
+      EXPORTING
+        iv_bukrs       = p_bukrs
+        iv_hkont       = p_hkont
+        iv_keyda       = p_keydat
+        iv_kunnr       = s_kunnr[]
+        iv_ktokd       = s_ktokd[]
+        iv_budat       = s_budat[]
+        iv_bldat       = s_bldat[]
+        iv_blart       = s_blart[]
+      EXCEPTIONS
+        contains_error = 1
+        OTHERS         = 2 ).
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+
+    CALL SCREEN 100.
+
+  ENDMETHOD.                    "start_of_selection
+  METHOD alv_session.
+
+    IF NOT lines( mo_model->mt_outdat ) IS INITIAL.
+      mo_view->display_alvdat(
+        EXCEPTIONS
+          contains_error = 1
+          OTHERS         = 2 ).
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      ENDIF.
+    ENDIF.
+
+  ENDMETHOD.                    "alv_session
+  METHOD get_last_day.
+
+    CALL FUNCTION 'RP_LAST_DAY_OF_MONTHS'
+      EXPORTING
+        day_in            = iv_date
+      IMPORTING
+        last_day_of_month = iv_date
+      EXCEPTIONS
+        day_in_no_date    = 1
+        OTHERS            = 2.
+
+  ENDMETHOD.                    "get_last_day
+  METHOD get_long_date.
+
+    DATA: t_month_names TYPE TABLE OF t247,
+          r_month_names TYPE REF TO t247,
+          l_daytxt      TYPE hrvsched-daytxt,
+          l_year(4)     TYPE c,
+          l_month(2)    TYPE c,
+          l_day(2)      TYPE c.
+
+    FREE: t_month_names.
+    CALL FUNCTION 'MONTH_NAMES_GET'
+      EXPORTING
+        language    = sy-langu
+      TABLES
+        month_names = t_month_names.
+
+    l_year = im_dat+0(4).
+    l_month = im_dat+4(2).
+    l_day = im_dat+6(2).
+
+    CLEAR: l_daytxt.
+    CALL FUNCTION 'RH_GET_DATE_DAYNAME'
+      EXPORTING
+        langu               = sy-langu
+        date                = im_dat
+      IMPORTING
+        daytxt              = l_daytxt
+      EXCEPTIONS
+        no_langu            = 1
+        no_date             = 2
+        no_daytxt_for_langu = 3
+        invalid_date        = 4
+        OTHERS              = 5.
+
+    READ TABLE t_month_names REFERENCE INTO r_month_names INDEX l_month.
+    IF sy-subrc IS INITIAL.
+      CONCATENATE l_day r_month_names->ltx l_year l_daytxt INTO r_dattxt SEPARATED BY space.
+    ENDIF.
+
+  ENDMETHOD.              "get_long_date
+  METHOD call_view_maintenance.
+
+    CALL FUNCTION 'VIEW_MAINTENANCE_CALL'
+      EXPORTING
+        action                       = 'U'
+        view_name                    = 'ZFI_022_T04'
+      EXCEPTIONS
+        client_reference             = 1
+        foreign_lock                 = 2
+        invalid_action               = 3
+        no_clientindependent_auth    = 4
+        no_database_function         = 5
+        no_editor_function           = 6
+        no_show_auth                 = 7
+        no_tvdir_entry               = 8
+        no_upd_auth                  = 9
+        only_show_allowed            = 10
+        system_failure               = 11
+        unknown_field_in_dba_sellist = 12
+        view_not_found               = 13
+        maintenance_prohibited       = 14
+        OTHERS                       = 15.
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+      WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+
+  ENDMETHOD.              "call_view_maintenance
+  METHOD due_date.
+    CALL FUNCTION 'NET_DUE_DATE_GET'
+      EXPORTING
+        i_zfbdt = im_zfbdt
+        i_zbd1t = im_zbd1t
+        i_zbd2t = im_zbd2t
+        i_zbd3t = im_zbd3t
+        i_shkzg = im_shkzg
+        i_rebzg = im_rebzg
+      IMPORTING
+        e_faedt = iv_zfbdt.
+
+  ENDMETHOD.              "due_date
+  METHOD get_selected_rows.
+    MODIFY mo_model->mt_outdat FROM VALUE #( selkz = abap_false ) TRANSPORTING selkz WHERE selkz EQ abap_true.
+
+    mo_view->mo_grid->get_selected_rows(
+      IMPORTING
+        et_row_no = DATA(t_seldat) ).
+    LOOP AT t_seldat ASSIGNING FIELD-SYMBOL(<seldat>).
+      READ TABLE mo_model->mt_outdat ASSIGNING FIELD-SYMBOL(<outdat>) INDEX <seldat>-row_id.
+      IF sy-subrc IS INITIAL.
+        <outdat>-selkz = abap_true.
+      ENDIF.
+    ENDLOOP.
+    IF NOT sy-subrc IS INITIAL.
+      MESSAGE s001(00) WITH 'Lütfen satır seçimi yapınız!' RAISING contains_error.
+    ENDIF.
+
+  ENDMETHOD.              "get_selected_rows
+  METHOD display_popup_message.
+
+    CALL FUNCTION 'POPUP_TO_CONFIRM'
+      EXPORTING
+        titlebar              = im_titlebar
+        text_question         = im_question
+        text_button_1         = 'Evet'
+        text_button_2         = 'Hayır'
+        default_button        = 2
+        display_cancel_button = abap_true
+      IMPORTING
+        answer                = rv_answer
+      EXCEPTIONS
+        text_not_found        = 1
+        OTHERS                = 2.
+
+  ENDMETHOD.  " display_popup_message
+  METHOD calculate_tax.
+
+    DATA: t_mwdat TYPE STANDARD TABLE OF rtax1u15.
+    FREE: t_mwdat.
+    CALL FUNCTION 'CALCULATE_TAX_FROM_NET_AMOUNT'
+      EXPORTING
+        i_bukrs           = p_bukrs
+        i_mwskz           = 'A0'
+        i_waers           = 'TRY'
+        i_wrbtr           = im_amount
+      TABLES
+        t_mwdat           = t_mwdat[]
+      EXCEPTIONS
+        bukrs_not_found   = 1
+        country_not_found = 2
+        mwskz_not_defined = 3
+        mwskz_not_valid   = 4
+        ktosl_not_found   = 5
+        kalsm_not_found   = 6
+        parameter_error   = 7
+        knumh_not_found   = 8
+        kschl_not_found   = 9
+        unknown_error     = 10
+        account_not_found = 11
+        txjcd_not_valid   = 12
+        OTHERS            = 13.
+    IF sy-subrc <> 0.
+
+    ELSE.
+      im_amount = t_mwdat[ 1 ]-kawrt.
+    ENDIF.
+  ENDMETHOD.  " calculate_tax
+  METHOD display_error.
+
+    CALL FUNCTION 'FINB_BAPIRET2_DISPLAY'
+      EXPORTING
+        it_message = it_msgdat.
+
+  ENDMETHOD.                "display_error
+  METHOD run_document.
+
+    TYPES:
+      BEGIN OF ty_bapidat,
+        header         TYPE bapiache09,
+        accountgl_tab  TYPE STANDARD TABLE OF bapiacgl09 WITH DEFAULT KEY,
+        accountrec_tab TYPE STANDARD TABLE OF bapiacar09 WITH DEFAULT KEY,
+        accounttax_tab TYPE STANDARD TABLE OF bapiactx09 WITH DEFAULT KEY,
+        curramount_tab TYPE STANDARD TABLE OF bapiaccr09 WITH DEFAULT KEY,
+        return_tab     TYPE STANDARD TABLE OF bapiret2 WITH DEFAULT KEY,
+        obj_key        TYPE bapiache09-obj_key,
+        itemno         TYPE posnr_acc,
+      END OF ty_bapidat.
+    DATA: _bapidat TYPE ty_bapidat,
+          _logdat  TYPE zfi_022_t02.
+
+*-&Selected rows->
+    get_selected_rows(
+      EXCEPTIONS
+        contains_error = 1
+        OTHERS         = 2 ).
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 RAISING contains_error.
+    ENDIF.
+
+    CHECK display_popup_message(
+      EXPORTING
+        im_titlebar = TEXT-t01
+        im_question = TEXT-t02 ) EQ '1'.
+
+    SELECT bukrs, t030k~ktopl, mwskz, ktosl, konth
+      FROM t030k
+      INNER JOIN t001 ON t001~ktopl = t030k~ktopl
+      INTO TABLE @DATA(t_t030)
+      WHERE bukrs EQ @p_bukrs
+        AND mwskz EQ 'A0'.
+
+    LOOP AT mo_model->mt_outdat ASSIGNING FIELD-SYMBOL(<outdat>) WHERE selkz EQ abap_true
+                                                                   AND ( light EQ icon_yellow_light OR light EQ icon_red_light ).
+
+      FREE: _bapidat.
+      _bapidat-header = VALUE #( obj_type = |BKPFF|
+                                 obj_key = |RFBU|
+                                 bus_act = |RFBU|
+                                 username = sy-uname
+                                 comp_code = p_bukrs
+                                 doc_date = p_budat
+                                 pstng_date = p_budat
+                                 fisc_year = p_budat(4)
+                                 fis_period = p_budat+4(2)
+                                 doc_type = 'RD'
+                                 ref_doc_no = 'VADE FARKI'
+                                 header_txt = |VADE FARKI FATURASI| ).
+
+      calculate_tax(
+        CHANGING
+          im_amount      = <outdat>-vftot
+        EXCEPTIONS
+          contains_error = 1
+          OTHERS         = 2 ).
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      ENDIF.
+
+      ADD 1 TO _bapidat-itemno.
+      _bapidat-accountrec_tab = VALUE #( BASE _bapidat-accountrec_tab (
+                                         itemno_acc = _bapidat-itemno
+                                         customer = <outdat>-kunnr
+                                         tax_code = |A0|
+                                         bline_date = <outdat>-keydat
+                                         item_text = |{ <outdat>-keydat DATE = USER } TARİHLİ VADE FARKI| ) ).
+
+      _bapidat-curramount_tab = VALUE #( BASE _bapidat-curramount_tab (
+                                          itemno_acc = _bapidat-itemno
+                                          curr_type = '00'
+                                          currency = 'TRY'
+                                          currency_iso = 'TRY'
+                                          amt_doccur = <outdat>-vftot ) ).
+
+
+      ADD 1 TO _bapidat-itemno.
+      _bapidat-accountgl_tab = VALUE #( BASE _bapidat-accountgl_tab (
+                                        itemno_acc = _bapidat-itemno
+                                        gl_account = <outdat>-hkont
+                                        tax_code = |A0|
+                                        costcenter = <outdat>-kostl
+                                        item_text = |{ <outdat>-keydat DATE = USER } TARİHLİ VADE FARKI| ) ).
+
+      _bapidat-curramount_tab = VALUE #( BASE _bapidat-curramount_tab (
+                                          itemno_acc = _bapidat-itemno
+                                          curr_type = '00'
+                                          currency = 'TRY'
+                                          currency_iso = 'TRY'
+                                          amt_doccur = <outdat>-vftot * -1 ) ).
+
+      ADD 1 TO _bapidat-itemno.
+      _bapidat-accounttax_tab = VALUE #( BASE _bapidat-accounttax_tab (
+                                          itemno_acc = _bapidat-itemno
+                                          tax_code = |A0|
+                                          gl_account = t_t030[ bukrs = <outdat>-bukrs ]-konth
+                                          acct_key = t_t030[ bukrs = <outdat>-bukrs ]-ktosl ) ).
+
+
+      _bapidat-curramount_tab = VALUE #( BASE _bapidat-curramount_tab (
+                                                itemno_acc = _bapidat-itemno
+                                                curr_type = '00'
+                                                currency = 'TRY'
+                                                currency_iso = 'TRY'
+                                                amt_doccur = space ) ).
+
+*-&Create Document->
+      _bapidat-return_tab = me->post_document(
+        EXPORTING
+          im_header     = _bapidat-header
+          im_curramount = _bapidat-curramount_tab
+          im_accountgl  = _bapidat-accountgl_tab
+          im_accounttax = _bapidat-accounttax_tab
+          im_accountrec = _bapidat-accountrec_tab
+        IMPORTING
+          ev_obj_key    = _bapidat-obj_key ).
+      IF NOT line_exists( _bapidat-return_tab[ type = _msg-error ] ).
+        MODIFY mo_model->mt_outdat FROM VALUE #( vfawkey = _bapidat-obj_key light = icon_green_light )
+          TRANSPORTING vfawkey light
+            WHERE selkz EQ abap_true
+              AND ( light EQ icon_yellow_light OR light = icon_red_light ).
+        _logdat = CORRESPONDING #( <outdat> MAPPING awkey = vfawkey vftut = vftot ).
+        MODIFY zfi_022_t02 FROM _logdat.
+        IF sy-subrc IS INITIAL.
+          COMMIT WORK.
+        ENDIF.
+      ELSE.
+        MESSAGE s003(zfi_022_msg01) RAISING contains_error.
+        MODIFY mo_model->mt_outdat FROM VALUE #( light = icon_red_light )
+          TRANSPORTING light
+            WHERE selkz EQ abap_true
+              AND ( light EQ icon_yellow_light OR light = icon_red_light ).
+      ENDIF.
+      INSERT LINES OF _bapidat-return_tab INTO TABLE rt_retdat.
+      INSERT LINES OF _bapidat-return_tab INTO TABLE <outdat>-msgdat.
+    ENDLOOP.
+    IF sy-subrc <> 0.
+      MESSAGE s003(zfi_022_msg01) RAISING contains_error.
+    ELSE.
+      MESSAGE s002(zfi_022_msg01).
+    ENDIF.
+
+  ENDMETHOD.              "run_document
+  METHOD post_document.
+
+    CLEAR: rt_return.
+    CALL FUNCTION 'BAPI_ACC_DOCUMENT_POST'
+      EXPORTING
+        documentheader    = im_header
+      IMPORTING
+        obj_key           = ev_obj_key
+      TABLES
+        accountgl         = im_accountgl
+        accountreceivable = im_accountrec
+        currencyamount    = im_curramount
+        accounttax        = im_accounttax
+        criteria          = im_criteria
+        return            = rt_return.
+
+    LOOP AT rt_return REFERENCE INTO DATA(lr_return) WHERE type CA 'EAX'.
+      EXIT.
+    ENDLOOP.
+    IF sy-subrc IS NOT INITIAL AND ev_obj_key IS NOT INITIAL.
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+        EXPORTING
+          wait = abap_true.
+    ELSE.
+      ROLLBACK WORK.
+    ENDIF.
+
+  ENDMETHOD.              "post_document
+  METHOD rev_document.
+    DATA: r_return TYPE REF TO bapiret2.
+
+    CALL FUNCTION 'BAPI_ACC_DOCUMENT_REV_POST'
+      EXPORTING
+        reversal = im_reversal
+        bus_act  = im_busact
+      IMPORTING
+        obj_key  = ev_objkey
+      TABLES
+        return   = et_return.
+
+    LOOP AT et_return REFERENCE INTO r_return WHERE type CA 'EAX'.
+      EXIT.
+    ENDLOOP.
+    IF sy-subrc IS NOT INITIAL AND ev_objkey IS NOT INITIAL.
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+        EXPORTING
+          wait = abap_true.
+    ELSE.
+      CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+    ENDIF.
+  ENDMETHOD.              "rev_document
+  METHOD run_rev_document.
+    TYPES:
+      BEGIN OF ty_bapidat,
+        ls_reversal TYPE bapiacrev,
+        ls_busact   TYPE bapiache09-bus_act,
+        ls_objkey   TYPE bapiacrev-obj_key,
+        retdat      TYPE bapiret2_tab,
+      END OF ty_bapidat.
+
+    DATA: _bapidat TYPE ty_bapidat,
+          _logsys  TYPE tbdls-logsys.
+
+    LOOP AT mo_model->mt_outdat ASSIGNING FIELD-SYMBOL(<outdat>) WHERE selkz = abap_true.
+
+      CALL FUNCTION 'OWN_LOGICAL_SYSTEM_GET'
+        IMPORTING
+          own_logical_system             = _logsys
+        EXCEPTIONS
+          own_logical_system_not_defined = 1
+          OTHERS                         = 2.
+
+      IF NOT <outdat>-vfawkey IS INITIAL.
+        _bapidat-ls_reversal-obj_type = 'BKPFF'.
+        _bapidat-ls_reversal-obj_sys = _logsys.
+        _bapidat-ls_reversal-obj_key = <outdat>-vfawkey.
+        _bapidat-ls_reversal-obj_key_r = <outdat>-vfawkey.
+        _bapidat-ls_reversal-comp_code = <outdat>-vfawkey+10(4).
+        _bapidat-ls_reversal-reason_rev = '01'.
+        _bapidat-ls_busact = 'RFBU'.
+
+        _controller->rev_document(
+          EXPORTING
+            im_reversal = _bapidat-ls_reversal
+            im_busact   = _bapidat-ls_busact
+          IMPORTING
+            ev_objkey   = _bapidat-ls_objkey
+            et_return   = _bapidat-retdat ).
+
+        IF NOT line_exists( _bapidat-retdat[ type = 'E' ] ).
+          <outdat>-light = icon_yellow_light.
+          MODIFY mo_model->mt_outdat FROM VALUE #( vfawkey = space ) TRANSPORTING vfawkey WHERE vfawkey = <outdat>-vfawkey.
+          MESSAGE s001(00) WITH 'Belgenin ters kaydı başarıyla alındı.'.
+          <outdat>-light = icon_yellow_light.
+        ELSE.
+          INSERT LINES OF _bapidat-retdat INTO rt_retdat INDEX 1.
+          INSERT LINES OF _bapidat-retdat INTO <outdat>-msgdat INDEX 1.
+        ENDIF.
+      ENDIF.
+    ENDLOOP.
+
+  ENDMETHOD.              "run_rev_document
+  METHOD handle_hotspot_click.
+
+    READ TABLE _controller->mo_model->mt_outdat ASSIGNING FIELD-SYMBOL(<outdat>) INDEX es_row_no-row_id.
+    IF sy-subrc IS INITIAL.
+      CASE e_column_id.
+        WHEN 'VFAWKEY'.
+          IF NOT <outdat>-vfawkey IS INITIAL.
+            _controller->mo_view->call_transaction(
+              EXPORTING
+                im_tcode     = CONV #( 'FB03' )
+                im_parameter = CONV #( VALUE #( ( param_id = 'BLN' value = <outdat>-vfawkey(10) )
+                                                ( param_id = 'BUK' value = <outdat>-vfawkey+10(4) )
+                                                ( param_id = 'GJR' value = <outdat>-vfawkey+14(4) ) ) ) ).
+          ENDIF.
+
+        WHEN 'MSGSHW'.
+          _controller->display_error(
+            EXPORTING
+              it_msgdat      = <outdat>-msgdat
+            EXCEPTIONS
+              contains_error = 1
+              OTHERS         = 2 ).
+          IF sy-subrc <> 0.
+            MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+          ENDIF.
+
+      ENDCASE.
+    ENDIF.
+
+  ENDMETHOD.              "handle_hotspot_click
+  METHOD handle_toolbar_set.
+
+    DELETE e_object->mt_toolbar WHERE function = '&LOCAL&COPY_ROW'
+                                   OR function = '&LOCAL&APPEND'
+                                   OR function = '&LOCAL&INSERT_ROW'
+                                   OR function = '&LOCAL&DELETE_ROW'
+                                   OR function = '&LOCAL&CUT'
+                                   OR function = '&LOCAL&COPY'
+                                   OR function = '&LOCAL&PASTE' .
+*-&Add ALV buttons;
+    e_object->mt_toolbar = VALUE #( BASE e_object->mt_toolbar
+                                  ( butn_type = 0
+                                    function  = '&RUNDAT'
+                                    icon      = icon_system_save
+                                    text      = 'Kaydet'
+                                    quickinfo = 'Kaydet' ) ).
+
+    e_object->mt_toolbar = VALUE #( BASE e_object->mt_toolbar
+                                  ( butn_type = 0
+                                    function  = '&REVDAT'
+                                    icon      = '@EI@'
+                                    text      = 'Ters Kayıt'
+                                    quickinfo = 'Ters Kayıt' ) ).
+
+  ENDMETHOD.                    "handle_toolbar
+  METHOD handle_change_finish.
+    DATA: _change TYPE flag.
+
+    LOOP AT et_good_cells ASSIGNING FIELD-SYMBOL(<cells>).
+      READ TABLE _controller->mo_model->mt_outdat ASSIGNING FIELD-SYMBOL(<outdat>) INDEX <cells>-row_id.
+      IF sy-subrc IS INITIAL.
+        CASE <cells>-fieldname.
+          WHEN 'VFTOT'.
+            _change = abap_true.
+        ENDCASE.
+      ENDIF.
+    ENDLOOP.
+    IF _change EQ abap_true.
+      _controller->mo_view->mo_grid->refresh_table_display(
+        EXPORTING
+          is_stable      = VALUE #( row = abap_true col = abap_true )
+          i_soft_refresh = 'X'
+        EXCEPTIONS
+          finished       = 1
+          OTHERS         = 2 ).
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+          WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      ENDIF.
+    ENDIF.
+
+  ENDMETHOD.                    "handle_change_finish
+  METHOD handle_user_command.
+    CASE e_ucomm.
+      WHEN '&RUNDAT'.
+        _controller->run_document(
+          RECEIVING
+            rt_retdat      = DATA(retdat)
+          EXCEPTIONS
+            contains_error = 1
+            OTHERS         = 2 ).
+        IF sy-subrc <> 0.
+          MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+            WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 DISPLAY LIKE 'E'.
+        ELSE.
+          _controller->display_error(
+            EXPORTING
+              it_msgdat      = retdat
+            EXCEPTIONS
+              contains_error = 1
+              OTHERS         = 2 ).
+          IF sy-subrc <> 0.
+            MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+          ENDIF.
+        ENDIF.
+
+      WHEN '&REVDAT'.
+        _controller->get_selected_rows(
+          EXCEPTIONS
+            contains_error = 1
+            OTHERS         = 2 ).
+        IF sy-subrc <> 0.
+          MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+            WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+        ELSE.
+          _controller->run_rev_document(
+            RECEIVING
+              rt_retdat      = retdat
+            EXCEPTIONS
+              contains_error = 1
+              OTHERS         = 2 ).
+          IF sy-subrc <> 0.
+            MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+              WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+          ELSE.
+            _controller->display_error(
+              EXPORTING
+                it_msgdat      = retdat
+              EXCEPTIONS
+                contains_error = 1
+                OTHERS         = 2 ).
+            IF sy-subrc <> 0.
+              MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+            ENDIF.
+          ENDIF.
+        ENDIF.
+
+    ENDCASE.
+
+    _controller->mo_view->mo_grid->refresh_table_display(
+      EXPORTING
+        is_stable = VALUE #( row = abap_true col = abap_true )
+      EXCEPTIONS
+        finished  = 1
+        OTHERS    = 2 ).
+    IF sy-subrc <> 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+  ENDMETHOD.                    "handle_user_command
+  METHOD handle_top_of_page.
+    event_top_of_page(
+      CHANGING
+        dg_dyndoc_id = e_dyndoc_id ).
+  ENDMETHOD.                    "handle_top_of_page
+  METHOD event_top_of_page.
+
+    DATA : dl_text(255) TYPE c,
+           v_name_last  TYPE adrp-name_last,
+           v_name_first TYPE adrp-name_first.
+
+    CONSTANTS: c_date_from TYPE adrp-date_from VALUE '00010101'.
+
+*-&Free class and create top of page document;
+    FREE dg_dyndoc_id.
+    CREATE OBJECT dg_dyndoc_id
+      EXPORTING
+        style = 'ALV_GRID'.
+
+*--------------------------------------------------------------------*
+*-&HEADER ->
+*--------------------------------------------------------------------*
+    CLEAR: dl_text.
+    CONCATENATE 'Başlık:' TEXT-h01 INTO dl_text.
+    CALL METHOD dg_dyndoc_id->add_text
+      EXPORTING
+        text         = dl_text
+        sap_style    = cl_dd_area=>heading
+        sap_fontsize = cl_dd_area=>standard
+        sap_color    = cl_dd_area=>list_heading_int.
+
+    CLEAR: dl_text.
+    dl_text = TEXT-h02.
+    CALL METHOD dg_dyndoc_id->new_line.
+    CALL METHOD dg_dyndoc_id->add_text
+      EXPORTING
+        text         = dl_text
+        sap_style    = cl_dd_area=>heading
+        sap_fontsize = cl_dd_area=>large
+        sap_emphasis = cl_dd_area=>strong.
+
+    CLEAR: dl_text.
+    dl_text = 'Kullanıcı Adı :'.
+    CALL METHOD dg_dyndoc_id->new_line.
+    CALL METHOD dg_dyndoc_id->add_text
+      EXPORTING
+        text         = dl_text
+        sap_emphasis = cl_dd_area=>strong
+        sap_color    = cl_dd_area=>list_heading_int.
+
+    CLEAR: dl_text, v_name_last, v_name_first.
+    SELECT SINGLE name_last name_first
+      FROM usr21 JOIN adrp ON adrp~persnumber = usr21~persnumber AND
+                              adrp~date_from  = c_date_from AND
+                              adrp~nation     = space
+        INTO (v_name_last, v_name_first)
+        WHERE usr21~bname = sy-uname.
+    CONCATENATE v_name_first v_name_last INTO dl_text SEPARATED BY space.
+
+    CALL METHOD dg_dyndoc_id->add_text
+      EXPORTING
+        text         = dl_text
+        sap_emphasis = cl_dd_area=>heading
+        sap_color    = cl_dd_area=>list_negative_inv.
+
+    CLEAR: dl_text.
+    dl_text = 'Tarih :'.
+    CALL METHOD dg_dyndoc_id->new_line.
+    CALL METHOD dg_dyndoc_id->add_text
+      EXPORTING
+        text         = dl_text
+        sap_emphasis = cl_dd_area=>strong
+        sap_color    = cl_dd_area=>list_heading_int.
+
+    CLEAR dl_text.
+    dl_text = get_long_date( im_dat = sy-datum ).
+    CALL METHOD dg_dyndoc_id->add_text
+      EXPORTING
+        text         = dl_text
+        sap_emphasis = cl_dd_area=>heading
+        sap_color    = cl_dd_area=>list_negative_inv.
+
+    display_top_of_page(
+      EXPORTING
+        dg_dyndoc_id = dg_dyndoc_id ).
+
+  ENDMETHOD.              "event_top_of_page
+  METHOD display_top_of_page.
+
+    IF mo_view->mo_html_cntrl IS INITIAL.
+      CREATE OBJECT mo_view->mo_html_cntrl
+        EXPORTING
+          parent = mo_view->mo_parent_top.
+    ENDIF.
+    CALL METHOD dg_dyndoc_id->merge_document.
+    dg_dyndoc_id->html_control = mo_view->mo_html_cntrl.
+
+    CALL METHOD dg_dyndoc_id->display_document
+      EXPORTING
+        reuse_control      = abap_true
+        parent             = mo_view->mo_parent_top
+      EXCEPTIONS
+        html_display_error = 1.
+    IF sy-subrc NE 0.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    ENDIF.
+  ENDMETHOD.              "display_top_of_page
+
+ENDCLASS.                    "lcl_mvc_controller IMPLEMENTATION

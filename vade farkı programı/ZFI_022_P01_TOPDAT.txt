@@ -1,0 +1,50 @@
+*&---------------------------------------------------------------------*
+*& Include          ZFI_022_P01_TOPDAT
+*&---------------------------------------------------------------------*
+
+TABLES: sscrfields, kna1, t001, bkpf, bseg, bsid, bsad.
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+  PARAMETERS: p_bukrs LIKE t001-bukrs MODIF ID buk.
+  SELECT-OPTIONS: s_kunnr FOR kna1-kunnr,
+                  s_ktokd FOR kna1-ktokd,
+                  s_budat FOR bkpf-budat,
+                  s_bldat FOR bkpf-bldat,
+                  s_blart FOR bkpf-blart.
+*                  s_umskz FOR bsid-umskz MATCHCODE OBJECT h_t074u.
+  PARAMETERS: p_keydat LIKE bkpf-budat DEFAULT sy-datum,
+              c_acik   AS CHECKBOX.
+
+  SELECTION-SCREEN FUNCTION KEY 1.
+SELECTION-SCREEN END OF BLOCK b1.
+
+SELECTION-SCREEN BEGIN OF BLOCK b2 WITH FRAME TITLE TEXT-002.
+  PARAMETERS: p_budat LIKE bkpf-budat,
+              p_blart LIKE bkpf-blart AS LISTBOX VISIBLE LENGTH 5 DEFAULT 'RD',
+              p_hkont LIKE bseg-hkont.
+SELECTION-SCREEN END OF BLOCK b2.
+
+CLASS lcl_mvc_model DEFINITION DEFERRED.
+CLASS lcl_mvc_view DEFINITION DEFERRED.
+CLASS lcl_mvc_controller DEFINITION DEFERRED.
+
+DATA _controller TYPE REF TO lcl_mvc_controller.
+
+CONSTANTS:
+  mc_awkey    TYPE bkpf-awkey VALUE 'DEVIR ÇALIŞTIRMASI',
+  mc_vforan1  TYPE zfi_022_e004 VALUE '1.60',
+  mc_vforan2  TYPE zfi_022_e004 VALUE '2.50',
+  mc_vforan3  TYPE zfi_022_e004 VALUE '3.50',
+  mc_vforan4  TYPE zfi_022_e004 VALUE '4.50',
+  mc_dayrate2 TYPE zfi_022_e008 VALUE '0.000834',
+  mc_dayrate3 TYPE zfi_022_e008 VALUE '0.001167',
+  mc_dayrate4 TYPE zfi_022_e008 VALUE '0.001500'.
+
+CONSTANTS: BEGIN OF _msg,
+             id      TYPE symsgid    VALUE 'ZFI_022_MSG01',
+             success TYPE bapi_mtype VALUE 'S',
+             error   TYPE bapi_mtype VALUE 'E',
+             warning TYPE bapi_mtype VALUE 'W',
+             info    TYPE bapi_mtype VALUE 'I',
+             abort   TYPE bapi_mtype VALUE 'A',
+           END OF _msg.
