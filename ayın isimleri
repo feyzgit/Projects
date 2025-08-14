@@ -1,0 +1,7 @@
+    DATA: _t247 TYPE t247.
+    CALL FUNCTION 'IDWT_READ_MONTH_TEXT'
+      EXPORTING
+        langu = sy-langu
+        month = '01'
+      IMPORTING
+        t247  = _t247.
