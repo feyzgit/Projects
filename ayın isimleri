@@ -1,3 +1,4 @@
+Ayın isimleri
     DATA: _t247 TYPE t247.
     CALL FUNCTION 'IDWT_READ_MONTH_TEXT'
       EXPORTING
